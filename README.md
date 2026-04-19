@@ -29,10 +29,40 @@ Vite 会输出到 `dist/`。
 ## Cloudflare Pages
 
 - Framework preset：`React (Vite)`
-- Build command：`pnpm run build`
+- Build command：`pnpm build`
 - Build output directory：`dist`
 
 这个项目不依赖 Pages Functions，Cloudflare 只负责静态托管、域名和 CDN。
+
+## 自定义域名
+
+Pages 项目的自定义域名建议直接在 Cloudflare Dashboard 配置：
+
+1. 打开 `Workers & Pages`
+2. 进入 Pages 项目 `squoosh-web`
+3. 在 `Custom domains` 里添加域名
+4. 按提示添加或确认 DNS 记录
+
+- `Pages` 方案下，不需要在 `wrangler.toml` 里配置 `[[routes]]`
+- 如果域名已接入 Cloudflare，通常使用 `CNAME -> <project>.pages.dev` 即可
+- 建议开启 `SSL/TLS -> Edge Certificates -> Always Use HTTPS`
+
+### 生效延迟
+
+自定义域名刚接入时，可能需要等待一段时间才完全稳定，常见影响因素包括：
+
+- DNS 记录全球传播
+- Cloudflare Pages 自定义域名绑定状态同步
+- Edge certificate 签发和下发
+- 边缘缓存刷新
+
+在这段时间里，可能会短暂出现：
+
+- 域名访问异常
+- `http` / `https` 跳转不稳定
+- 部分地区已生效、部分地区未生效
+
+如果刚完成配置，建议先等待几分钟到几十分钟，再重新检查 `Custom domains` 状态是否为 `Active`。
 
 ## Wrangler 部署
 
@@ -42,7 +72,7 @@ Vite 会输出到 `dist/`。
 
 ```bash
 npx wrangler login
-pnpm cf:project:create
+pnpm cf:project:create  #后面还需要运行 pnpm cf:deploy 进行部署
 ```
 
 如果你在 Cloudflare 上创建的项目名不是 `squoosh-web`，请同步修改 `wrangler.toml` 里的 `name`。
