@@ -9,7 +9,7 @@
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "cf:project:create": "wrangler pages project create",
+    "cf:project:create": "wrangler pages project create squoosh-web --production-branch=main",
     "cf:dev": "pnpm build && wrangler pages dev",
     "cf:deploy": "pnpm build && wrangler pages deploy",
     "cf:deploy:skip-cache": "pnpm build && wrangler pages deploy --skip-caching"

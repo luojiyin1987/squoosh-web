@@ -46,6 +46,7 @@ pnpm cf:project:create
 ```
 
 如果你在 Cloudflare 上创建的项目名不是 `squoosh-web`，请同步修改 `wrangler.toml` 里的 `name`。
+默认脚本会创建名为 `squoosh-web`、生产分支为 `main` 的 Pages 项目。
 
 本地可用命令：
 
