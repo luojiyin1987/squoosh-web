@@ -29,7 +29,7 @@ Vite 会输出到 `dist/`。
 ## Cloudflare Pages
 
 - Framework preset：`React (Vite)`
-- Build command：`npm run build`
+- Build command：`pnpm run build`
 - Build output directory：`dist`
 
 这个项目不依赖 Pages Functions，Cloudflare 只负责静态托管、域名和 CDN。
@@ -41,7 +41,7 @@ Vite 会输出到 `dist/`。
 首次使用前，需要先登录并创建 Pages 项目：
 
 ```bash
-npx wrangler login
+pnpx wrangler login
 pnpm cf:project:create
 ```
 
