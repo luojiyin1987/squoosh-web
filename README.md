@@ -41,7 +41,7 @@ Vite 会输出到 `dist/`。
 首次使用前，需要先登录并创建 Pages 项目：
 
 ```bash
-pnpx wrangler login
+npx wrangler login
 pnpm cf:project:create
 ```
 
