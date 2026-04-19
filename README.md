@@ -14,14 +14,14 @@
 ## 本地开发
 
 ```bash
-npm install
-npm run dev
+pnpm install
+pnpm dev
 ```
 
 ## 生产构建
 
 ```bash
-npm run build
+pnpm build
 ```
 
 Vite 会输出到 `dist/`。
@@ -42,7 +42,7 @@ Vite 会输出到 `dist/`。
 
 ```bash
 npx wrangler login
-npm run cf:project:create
+pnpm cf:project:create
 ```
 
 如果你在 Cloudflare 上创建的项目名不是 `squoosh-web`，请同步修改 `wrangler.toml` 里的 `name`。
@@ -50,8 +50,8 @@ npm run cf:project:create
 本地可用命令：
 
 ```bash
-npm run cf:dev
-npm run cf:deploy
+pnpm cf:dev
+pnpm cf:deploy
 ```
 
 - `cf:dev` 会先构建 `dist/`，再用 `wrangler pages dev` 以 Pages 方式本地预览
