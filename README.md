@@ -34,6 +34,44 @@ Vite 会输出到 `dist/`。
 
 这个项目不依赖 Pages Functions，Cloudflare 只负责静态托管、域名和 CDN。
 
+## Wrangler 部署
+
+项目已经集成了 `wrangler` 和 Pages 配置文件 [wrangler.toml](./wrangler.toml)。
+
+首次使用前，需要先登录并创建 Pages 项目：
+
+```bash
+npx wrangler login
+npm run cf:project:create
+```
+
+如果你在 Cloudflare 上创建的项目名不是 `squoosh-web`，请同步修改 `wrangler.toml` 里的 `name`。
+
+本地可用命令：
+
+```bash
+npm run cf:dev
+npm run cf:deploy
+```
+
+- `cf:dev` 会先构建 `dist/`，再用 `wrangler pages dev` 以 Pages 方式本地预览
+- `cf:deploy` 会构建后直接发布到 Cloudflare Pages
+
+## GitHub Actions 自动化部署
+
+仓库包含工作流 [pages-deployment.yml](./.github/workflows/pages-deployment.yml)：
+
+- push 到 `main`：自动发布到生产环境
+- Pull Request：自动创建 Pages 预览部署
+- `workflow_dispatch`：支持手动触发，并按 `main` 分支发布
+
+需要在 GitHub 仓库里配置两个 Secrets：
+
+- `CLOUDFLARE_API_TOKEN`
+- `CLOUDFLARE_ACCOUNT_ID`
+
+`CLOUDFLARE_API_TOKEN` 需要具备 `Account / Cloudflare Pages / Edit` 权限。
+
 ## 当前实现
 
 - 浏览器本地读取图片并转成 `ImageData`
