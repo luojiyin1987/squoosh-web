@@ -1,4 +1,4 @@
-import { type DragEvent, useEffect, useMemo, useState } from 'react'
+import { type DragEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import './App.css'
 import {
   buildDownloadName,
@@ -58,21 +58,11 @@ function App() {
   const [isDragActive, setIsDragActive] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  useEffect(() => {
-    return () => {
-      if (sourcePreviewUrl) {
-        URL.revokeObjectURL(sourcePreviewUrl)
-      }
-    }
-  }, [sourcePreviewUrl])
-
-  useEffect(() => {
-    return () => {
-      if (result) {
-        URL.revokeObjectURL(result.previewUrl)
-      }
-    }
-  }, [result])
+  // 用 ref 管理 object URL，避免 useEffect 清理竞态问题
+  const sourcePreviewRef = useRef<string | null>(null)
+  const resultPreviewRef = useRef<string | null>(null)
+  // 用 ref 追踪当前正在进行的压缩任务代数，防止旧任务覆盖新结果
+  const compressionGenerationRef = useRef(0)
 
   const fileName = selectedFile?.name ?? 'source-image'
   const activeFormatMeta = FORMAT_NOTES[settings.format]
@@ -91,27 +81,50 @@ function App() {
     }
   }, [result])
 
-  function clearResult() {
-    setResult((previous) => {
-      if (previous) {
-        URL.revokeObjectURL(previous.previewUrl)
-      }
+  const revokeSourcePreview = useCallback(() => {
+    if (sourcePreviewRef.current) {
+      URL.revokeObjectURL(sourcePreviewRef.current)
+      sourcePreviewRef.current = null
+    }
+  }, [])
 
-      return null
-    })
+  const revokeResultPreview = useCallback(() => {
+    if (resultPreviewRef.current) {
+      URL.revokeObjectURL(resultPreviewRef.current)
+      resultPreviewRef.current = null
+    }
+  }, [])
+
+  // 同步 React state 和 ref
+  useEffect(() => {
+    sourcePreviewRef.current = sourcePreviewUrl
+  }, [sourcePreviewUrl])
+
+  useEffect(() => {
+    resultPreviewRef.current = result?.previewUrl ?? null
+  }, [result])
+
+  // 组件卸载时清理所有 object URL
+  useEffect(() => {
+    return () => {
+      revokeSourcePreview()
+      revokeResultPreview()
+    }
+  }, [revokeSourcePreview, revokeResultPreview])
+
+  function clearResult() {
+    setResult(null)
+    revokeResultPreview()
   }
 
   function handleFileSelection(file: File | null) {
     setError(null)
     clearResult()
     setSelectedFile(file)
-    setSourcePreviewUrl((previous) => {
-      if (previous) {
-        URL.revokeObjectURL(previous)
-      }
-
-      return file ? URL.createObjectURL(file) : null
-    })
+    revokeSourcePreview()
+    const newUrl = file ? URL.createObjectURL(file) : null
+    sourcePreviewRef.current = newUrl
+    setSourcePreviewUrl(newUrl)
   }
 
   async function handleCompress() {
@@ -123,12 +136,27 @@ function App() {
     clearResult()
     setIsCompressing(true)
 
+    // 增加任务代数，旧任务的结果将被丢弃
+    const generation = ++compressionGenerationRef.current
     const startedAt = performance.now()
 
     try {
       const decoded = await fileToImageData(selectedFile)
+
+      // 如果用户在此期间选择了新文件或再次点击，放弃本次结果
+      if (generation !== compressionGenerationRef.current) {
+        return
+      }
+
       const encoded = await encodeImage(decoded.imageData, settings)
+
+      if (generation !== compressionGenerationRef.current) {
+        return
+      }
+
       const outputBlob = new Blob([encoded.bytes], { type: encoded.mimeType })
+      const previewUrl = URL.createObjectURL(outputBlob)
+      resultPreviewRef.current = previewUrl
 
       setResult({
         elapsedMs: performance.now() - startedAt,
@@ -137,11 +165,16 @@ function App() {
         inputBytes: selectedFile.size,
         mimeType: encoded.mimeType,
         outputBytes: outputBlob.size,
-        previewUrl: URL.createObjectURL(outputBlob),
+        previewUrl,
         width: decoded.width,
         height: decoded.height,
       })
     } catch (caughtError) {
+      // 只展示最新任务的错误
+      if (generation !== compressionGenerationRef.current) {
+        return
+      }
+
       const message =
         caughtError instanceof Error
           ? caughtError.message
@@ -149,7 +182,9 @@ function App() {
 
       setError(message)
     } finally {
-      setIsCompressing(false)
+      if (generation === compressionGenerationRef.current) {
+        setIsCompressing(false)
+      }
     }
   }
 
