@@ -1,4 +1,4 @@
-import { type DragEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { type DragEvent, useEffect, useMemo, useReducer, useRef, useState } from 'react'
 import './App.css'
 import {
   buildDownloadName,
@@ -8,6 +8,7 @@ import {
   FORMAT_LABELS,
   type CompressionFormat,
   type CompressionSettings,
+  type DecodedImage,
 } from './lib/codecs'
 
 interface CompressionResult {
@@ -21,6 +22,43 @@ interface CompressionResult {
   width: number
   height: number
 }
+
+type CompressionPhase =
+  | { tag: 'idle' }
+  | { tag: 'ready' }
+  | {
+      tag: 'decoding'
+      file: File
+      requestId: number
+      settings: CompressionSettings
+      startedAt: number
+    }
+  | {
+      tag: 'encoding'
+      decoded: DecodedImage
+      file: File
+      requestId: number
+      settings: CompressionSettings
+      startedAt: number
+    }
+  | { tag: 'success'; result: CompressionResult }
+  | { tag: 'error'; message: string }
+
+interface AppState {
+  file: File | null
+  nextRequestId: number
+  phase: CompressionPhase
+  settings: CompressionSettings
+}
+
+type Action =
+  | { type: 'selectFile'; file: File | null }
+  | { type: 'updateSettings'; partial: Partial<CompressionSettings> }
+  | { type: 'startCompression'; startedAt: number }
+  | { type: 'decodeSuccess'; decoded: DecodedImage }
+  | { type: 'decodeError'; message: string }
+  | { type: 'encodeSuccess'; result: CompressionResult }
+  | { type: 'encodeError'; message: string }
 
 const FORMAT_NOTES: Record<
   CompressionFormat,
@@ -49,24 +87,136 @@ const FORMAT_NOTES: Record<
 
 const FORMAT_ORDER: CompressionFormat[] = ['webp', 'avif', 'jpeg', 'png']
 
-function App() {
-  const [settings, setSettings] = useState<CompressionSettings>(DEFAULT_SETTINGS)
-  const [selectedFile, setSelectedFile] = useState<File | null>(null)
-  const [sourcePreviewUrl, setSourcePreviewUrl] = useState<string | null>(null)
-  const [result, setResult] = useState<CompressionResult | null>(null)
-  const [isCompressing, setIsCompressing] = useState(false)
-  const [isDragActive, setIsDragActive] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+const INITIAL_STATE: AppState = {
+  file: null,
+  nextRequestId: 1,
+  phase: { tag: 'idle' },
+  settings: { ...DEFAULT_SETTINGS },
+}
 
-  // 用 ref 管理 object URL，避免 useEffect 清理竞态问题
-  const sourcePreviewRef = useRef<string | null>(null)
-  const resultPreviewRef = useRef<string | null>(null)
-  // 用 ref 追踪当前正在进行的压缩任务代数，防止旧任务覆盖新结果
-  const compressionGenerationRef = useRef(0)
+function getReadyPhase(file: File | null): CompressionPhase {
+  return file ? { tag: 'ready' } : { tag: 'idle' }
+}
+
+function reducer(state: AppState, action: Action): AppState {
+  switch (action.type) {
+    case 'selectFile':
+      return {
+        ...state,
+        file: action.file,
+        phase: getReadyPhase(action.file),
+      }
+
+    case 'updateSettings':
+      return {
+        ...state,
+        phase: getReadyPhase(state.file),
+        settings: {
+          ...state.settings,
+          ...action.partial,
+        },
+      }
+
+    case 'startCompression': {
+      if (!state.file) {
+        return state
+      }
+
+      return {
+        ...state,
+        nextRequestId: state.nextRequestId + 1,
+        phase: {
+          tag: 'decoding',
+          file: state.file,
+          requestId: state.nextRequestId,
+          settings: { ...state.settings },
+          startedAt: action.startedAt,
+        },
+      }
+    }
+
+    case 'decodeSuccess': {
+      if (state.phase.tag !== 'decoding') {
+        return state
+      }
+
+      return {
+        ...state,
+        nextRequestId: state.nextRequestId + 1,
+        phase: {
+          tag: 'encoding',
+          decoded: action.decoded,
+          file: state.phase.file,
+          requestId: state.nextRequestId,
+          settings: state.phase.settings,
+          startedAt: state.phase.startedAt,
+        },
+      }
+    }
+
+    case 'decodeError':
+      if (state.phase.tag !== 'decoding') {
+        return state
+      }
+
+      return {
+        ...state,
+        phase: {
+          tag: 'error',
+          message: action.message,
+        },
+      }
+
+    case 'encodeSuccess':
+      if (state.phase.tag !== 'encoding') {
+        return state
+      }
+
+      return {
+        ...state,
+        phase: {
+          tag: 'success',
+          result: action.result,
+        },
+      }
+
+    case 'encodeError':
+      if (state.phase.tag !== 'encoding') {
+        return state
+      }
+
+      return {
+        ...state,
+        phase: {
+          tag: 'error',
+          message: action.message,
+        },
+      }
+  }
+}
+
+function App() {
+  const [state, dispatch] = useReducer(reducer, INITIAL_STATE)
+  const [isDragActive, setIsDragActive] = useState(false)
+  const [sourcePreviewUrl, setSourcePreviewUrl] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement | null>(null)
+  const stateRef = useRef(state)
+
+  const selectedFile = state.file
+  const result = state.phase.tag === 'success' ? state.phase.result : null
+  const error = state.phase.tag === 'error' ? state.phase.message : null
+  const isCompressing =
+    state.phase.tag === 'decoding' || state.phase.tag === 'encoding'
 
   const fileName = selectedFile?.name ?? 'source-image'
-  const activeFormatMeta = FORMAT_NOTES[settings.format]
+  const activeFormatMeta = FORMAT_NOTES[state.settings.format]
+  const resultPreviewUrl = result?.previewUrl ?? null
+  const decodeRequestId =
+    state.phase.tag === 'decoding' ? state.phase.requestId : null
+  const encodeRequestId =
+    state.phase.tag === 'encoding' ? state.phase.requestId : null
+  const decodingPhase = state.phase.tag === 'decoding' ? state.phase : null
+  const encodingPhase = state.phase.tag === 'encoding' ? state.phase : null
 
   const resultSummary = useMemo(() => {
     if (!result) {
@@ -82,124 +232,161 @@ function App() {
     }
   }, [result])
 
-  const revokeSourcePreview = useCallback(() => {
-    if (sourcePreviewRef.current) {
-      URL.revokeObjectURL(sourcePreviewRef.current)
-      sourcePreviewRef.current = null
-    }
-  }, [])
-
-  const revokeResultPreview = useCallback(() => {
-    if (resultPreviewRef.current) {
-      URL.revokeObjectURL(resultPreviewRef.current)
-      resultPreviewRef.current = null
-    }
-  }, [])
-
-  // 同步 React state 和 ref
   useEffect(() => {
-    sourcePreviewRef.current = sourcePreviewUrl
+    stateRef.current = state
+  }, [state])
+
+  useEffect(() => {
+    if (!sourcePreviewUrl) {
+      return
+    }
+
+    return () => {
+      URL.revokeObjectURL(sourcePreviewUrl)
+    }
   }, [sourcePreviewUrl])
 
   useEffect(() => {
-    resultPreviewRef.current = result?.previewUrl ?? null
-  }, [result])
-
-  // 组件卸载时清理所有 object URL
-  useEffect(() => {
-    return () => {
-      revokeSourcePreview()
-      revokeResultPreview()
+    if (!resultPreviewUrl) {
+      return
     }
-  }, [revokeSourcePreview, revokeResultPreview])
 
-  function clearResult() {
-    setResult(null)
-    revokeResultPreview()
-  }
+    return () => {
+      URL.revokeObjectURL(resultPreviewUrl)
+    }
+  }, [resultPreviewUrl])
+
+  useEffect(() => {
+    if (!decodingPhase) {
+      return
+    }
+
+    const { file, requestId } = decodingPhase
+    let cancelled = false
+
+    fileToImageData(file)
+      .then((decoded) => {
+        const currentPhase = stateRef.current.phase
+
+        if (
+          cancelled ||
+          currentPhase.tag !== 'decoding' ||
+          currentPhase.requestId !== requestId
+        ) {
+          return
+        }
+
+        dispatch({ type: 'decodeSuccess', decoded })
+      })
+      .catch((caughtError) => {
+        const currentPhase = stateRef.current.phase
+
+        if (
+          cancelled ||
+          currentPhase.tag !== 'decoding' ||
+          currentPhase.requestId !== requestId
+        ) {
+          return
+        }
+
+        const message =
+          caughtError instanceof Error
+            ? caughtError.message
+            : 'Compression failed in the browser.'
+
+        dispatch({ type: 'decodeError', message })
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [decodeRequestId, decodingPhase])
+
+  useEffect(() => {
+    if (!encodingPhase) {
+      return
+    }
+
+    const { decoded, file, requestId, settings, startedAt } = encodingPhase
+    let cancelled = false
+
+    encodeImage(decoded.imageData, settings)
+      .then((encoded) => {
+        const currentPhase = stateRef.current.phase
+
+        if (
+          cancelled ||
+          currentPhase.tag !== 'encoding' ||
+          currentPhase.requestId !== requestId
+        ) {
+          return
+        }
+
+        const outputBlob = new Blob([encoded.bytes], { type: encoded.mimeType })
+        const previewUrl = URL.createObjectURL(outputBlob)
+
+        dispatch({
+          type: 'encodeSuccess',
+          result: {
+            elapsedMs: performance.now() - startedAt,
+            extension: encoded.extension,
+            format: encoded.format,
+            inputBytes: file.size,
+            mimeType: encoded.mimeType,
+            outputBytes: outputBlob.size,
+            previewUrl,
+            width: decoded.width,
+            height: decoded.height,
+          },
+        })
+      })
+      .catch((caughtError) => {
+        const currentPhase = stateRef.current.phase
+
+        if (
+          cancelled ||
+          currentPhase.tag !== 'encoding' ||
+          currentPhase.requestId !== requestId
+        ) {
+          return
+        }
+
+        const message =
+          caughtError instanceof Error
+            ? caughtError.message
+            : 'Compression failed in the browser.'
+
+        dispatch({ type: 'encodeError', message })
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [encodeRequestId, encodingPhase])
 
   function handleFileSelection(file: File | null) {
-    compressionGenerationRef.current++
-    setIsCompressing(false)
-    setError(null)
-    clearResult()
-    setSelectedFile(file)
-    revokeSourcePreview()
-    const newUrl = file ? URL.createObjectURL(file) : null
-    sourcePreviewRef.current = newUrl
-    setSourcePreviewUrl(newUrl)
+    if (sourcePreviewUrl) {
+      URL.revokeObjectURL(sourcePreviewUrl)
+    }
+
+    const nextSourcePreviewUrl = file ? URL.createObjectURL(file) : null
+    setSourcePreviewUrl(nextSourcePreviewUrl)
+    dispatch({ type: 'selectFile', file })
+
     if (fileInputRef.current) {
       fileInputRef.current.value = ''
     }
   }
 
   function updateSettings(partial: Partial<CompressionSettings>) {
-    compressionGenerationRef.current++
-    setIsCompressing(false)
-    setError(null)
-    clearResult()
-    setSettings((previous) => ({ ...previous, ...partial }))
+    dispatch({ type: 'updateSettings', partial })
   }
 
-  async function handleCompress() {
-    if (!selectedFile) {
-      return
-    }
-
-    setError(null)
-    clearResult()
-    setIsCompressing(true)
-
-    // 增加任务代数，旧任务的结果将被丢弃
-    const generation = ++compressionGenerationRef.current
-    const startedAt = performance.now()
-
-    try {
-      const decoded = await fileToImageData(selectedFile)
-
-      // 如果用户在此期间选择了新文件或再次点击，放弃本次结果
-      if (generation !== compressionGenerationRef.current) {
-        return
-      }
-
-      const encoded = await encodeImage(decoded.imageData, settings)
-
-      if (generation !== compressionGenerationRef.current) {
-        return
-      }
-
-      const outputBlob = new Blob([encoded.bytes], { type: encoded.mimeType })
-      const previewUrl = URL.createObjectURL(outputBlob)
-      resultPreviewRef.current = previewUrl
-
-      setResult({
-        elapsedMs: performance.now() - startedAt,
-        extension: encoded.extension,
-        format: encoded.format,
-        inputBytes: selectedFile.size,
-        mimeType: encoded.mimeType,
-        outputBytes: outputBlob.size,
-        previewUrl,
-        width: decoded.width,
-        height: decoded.height,
-      })
-    } catch (caughtError) {
-      // 只展示最新任务的错误
-      if (generation !== compressionGenerationRef.current) {
-        return
-      }
-
-      const message =
-        caughtError instanceof Error
-          ? caughtError.message
-          : 'Compression failed in the browser.'
-
-      setError(message)
-    } finally {
-      if (generation === compressionGenerationRef.current) {
-        setIsCompressing(false)
-      }
-    }
+  function handleCompress() {
+    dispatch({
+      type: 'startCompression',
+      startedAt: performance.now(),
+    })
   }
 
   function handleDrop(event: DragEvent<HTMLLabelElement>) {
@@ -269,8 +456,8 @@ function App() {
             <input
               accept="image/*"
               className="sr-only"
-              type="file"
               ref={fileInputRef}
+              type="file"
               onChange={(event) =>
                 handleFileSelection(event.target.files?.item(0) ?? null)
               }
@@ -308,7 +495,7 @@ function App() {
               <button
                 key={format}
                 className={`format-card${
-                  settings.format === format ? ' format-card-active' : ''
+                  state.settings.format === format ? ' format-card-active' : ''
                 }`}
                 type="button"
                 onClick={() => updateSettings({ format })}
@@ -322,7 +509,7 @@ function App() {
           <div className="control-group">
             <p className="control-caption">{activeFormatMeta.blurb}</p>
 
-            {settings.format !== 'png' ? (
+            {state.settings.format !== 'png' ? (
               <label className="field">
                 <span>{activeFormatMeta.controlsLabel}</span>
                 <div className="field-row">
@@ -331,12 +518,12 @@ function App() {
                     min={35}
                     step={1}
                     type="range"
-                    value={settings.quality}
+                    value={state.settings.quality}
                     onChange={(event) =>
                       updateSettings({ quality: Number(event.target.value) })
                     }
                   />
-                  <code>{settings.quality}</code>
+                  <code>{state.settings.quality}</code>
                 </div>
               </label>
             ) : (
@@ -348,30 +535,30 @@ function App() {
                     min={0}
                     step={1}
                     type="range"
-                    value={settings.pngLevel}
+                    value={state.settings.pngLevel}
                     onChange={(event) =>
                       updateSettings({ pngLevel: Number(event.target.value) })
                     }
                   />
-                  <code>{settings.pngLevel}</code>
+                  <code>{state.settings.pngLevel}</code>
                 </div>
               </label>
             )}
 
-            {settings.format === 'webp' ? (
+            {state.settings.format === 'webp' ? (
               <label className="toggle">
                 <input
-                  checked={settings.webpLossless}
+                  checked={state.settings.webpLossless}
                   type="checkbox"
-                    onChange={(event) =>
-                      updateSettings({ webpLossless: event.target.checked })
-                    }
+                  onChange={(event) =>
+                    updateSettings({ webpLossless: event.target.checked })
+                  }
                 />
                 <span>Use WebP lossless mode</span>
               </label>
             ) : null}
 
-            {settings.format === 'avif' ? (
+            {state.settings.format === 'avif' ? (
               <>
                 <label className="field">
                   <span>AVIF speed</span>
@@ -381,18 +568,18 @@ function App() {
                       min={0}
                       step={1}
                       type="range"
-                      value={settings.avifSpeed}
+                      value={state.settings.avifSpeed}
                       onChange={(event) =>
-                      updateSettings({ avifSpeed: Number(event.target.value) })
+                        updateSettings({ avifSpeed: Number(event.target.value) })
                       }
                     />
-                    <code>{settings.avifSpeed}</code>
+                    <code>{state.settings.avifSpeed}</code>
                   </div>
                 </label>
 
                 <label className="toggle">
                   <input
-                    checked={settings.avifLossless}
+                    checked={state.settings.avifLossless}
                     type="checkbox"
                     onChange={(event) =>
                       updateSettings({ avifLossless: event.target.checked })
@@ -408,7 +595,7 @@ function App() {
             className="primary-button"
             disabled={!selectedFile || isCompressing}
             type="button"
-            onClick={() => void handleCompress()}
+            onClick={handleCompress}
           >
             {isCompressing ? 'Compressing in browser...' : 'Run compression'}
           </button>
