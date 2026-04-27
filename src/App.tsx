@@ -2,63 +2,17 @@ import { type DragEvent, useEffect, useMemo, useReducer, useRef, useState } from
 import './App.css'
 import {
   buildDownloadName,
-  DEFAULT_SETTINGS,
   encodeImage,
   fileToImageData,
   FORMAT_LABELS,
   type CompressionFormat,
   type CompressionSettings,
-  type DecodedImage,
 } from './lib/codecs'
-
-interface CompressionResult {
-  elapsedMs: number
-  extension: string
-  format: CompressionFormat
-  inputBytes: number
-  mimeType: string
-  outputBytes: number
-  previewUrl: string
-  width: number
-  height: number
-}
-
-type CompressionPhase =
-  | { tag: 'idle' }
-  | { tag: 'ready' }
-  | {
-      tag: 'decoding'
-      file: File
-      requestId: number
-      settings: CompressionSettings
-      startedAt: number
-    }
-  | {
-      tag: 'encoding'
-      decoded: DecodedImage
-      file: File
-      requestId: number
-      settings: CompressionSettings
-      startedAt: number
-    }
-  | { tag: 'success'; result: CompressionResult }
-  | { tag: 'error'; message: string }
-
-interface AppState {
-  file: File | null
-  nextRequestId: number
-  phase: CompressionPhase
-  settings: CompressionSettings
-}
-
-type Action =
-  | { type: 'selectFile'; file: File | null }
-  | { type: 'updateSettings'; partial: Partial<CompressionSettings> }
-  | { type: 'startCompression'; startedAt: number }
-  | { type: 'decodeSuccess'; decoded: DecodedImage }
-  | { type: 'decodeError'; message: string }
-  | { type: 'encodeSuccess'; result: CompressionResult }
-  | { type: 'encodeError'; message: string }
+import {
+  compressionReducer,
+  INITIAL_COMPRESSION_STATE,
+  isCurrentRequestPhase,
+} from './lib/compression-state'
 
 const FORMAT_NOTES: Record<
   CompressionFormat,
@@ -87,116 +41,11 @@ const FORMAT_NOTES: Record<
 
 const FORMAT_ORDER: CompressionFormat[] = ['webp', 'avif', 'jpeg', 'png']
 
-const INITIAL_STATE: AppState = {
-  file: null,
-  nextRequestId: 1,
-  phase: { tag: 'idle' },
-  settings: { ...DEFAULT_SETTINGS },
-}
-
-function getReadyPhase(file: File | null): CompressionPhase {
-  return file ? { tag: 'ready' } : { tag: 'idle' }
-}
-
-function reducer(state: AppState, action: Action): AppState {
-  switch (action.type) {
-    case 'selectFile':
-      return {
-        ...state,
-        file: action.file,
-        phase: getReadyPhase(action.file),
-      }
-
-    case 'updateSettings':
-      return {
-        ...state,
-        phase: getReadyPhase(state.file),
-        settings: {
-          ...state.settings,
-          ...action.partial,
-        },
-      }
-
-    case 'startCompression': {
-      if (!state.file) {
-        return state
-      }
-
-      return {
-        ...state,
-        nextRequestId: state.nextRequestId + 1,
-        phase: {
-          tag: 'decoding',
-          file: state.file,
-          requestId: state.nextRequestId,
-          settings: { ...state.settings },
-          startedAt: action.startedAt,
-        },
-      }
-    }
-
-    case 'decodeSuccess': {
-      if (state.phase.tag !== 'decoding') {
-        return state
-      }
-
-      return {
-        ...state,
-        nextRequestId: state.nextRequestId + 1,
-        phase: {
-          tag: 'encoding',
-          decoded: action.decoded,
-          file: state.phase.file,
-          requestId: state.nextRequestId,
-          settings: state.phase.settings,
-          startedAt: state.phase.startedAt,
-        },
-      }
-    }
-
-    case 'decodeError':
-      if (state.phase.tag !== 'decoding') {
-        return state
-      }
-
-      return {
-        ...state,
-        phase: {
-          tag: 'error',
-          message: action.message,
-        },
-      }
-
-    case 'encodeSuccess':
-      if (state.phase.tag !== 'encoding') {
-        return state
-      }
-
-      return {
-        ...state,
-        phase: {
-          tag: 'success',
-          result: action.result,
-        },
-      }
-
-    case 'encodeError':
-      if (state.phase.tag !== 'encoding') {
-        return state
-      }
-
-      return {
-        ...state,
-        phase: {
-          tag: 'error',
-          message: action.message,
-        },
-      }
-  }
-}
-
 function App() {
-  const [state, dispatch] = useReducer(reducer, INITIAL_STATE)
+  const [state, dispatch] = useReducer(
+    compressionReducer,
+    INITIAL_COMPRESSION_STATE,
+  )
   const [isDragActive, setIsDragActive] = useState(false)
   const [sourcePreviewUrl, setSourcePreviewUrl] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement | null>(null)
@@ -268,11 +117,7 @@ function App() {
       .then((decoded) => {
         const currentPhase = stateRef.current.phase
 
-        if (
-          cancelled ||
-          currentPhase.tag !== 'decoding' ||
-          currentPhase.requestId !== requestId
-        ) {
+        if (cancelled || !isCurrentRequestPhase(currentPhase, 'decoding', requestId)) {
           return
         }
 
@@ -281,11 +126,7 @@ function App() {
       .catch((caughtError) => {
         const currentPhase = stateRef.current.phase
 
-        if (
-          cancelled ||
-          currentPhase.tag !== 'decoding' ||
-          currentPhase.requestId !== requestId
-        ) {
+        if (cancelled || !isCurrentRequestPhase(currentPhase, 'decoding', requestId)) {
           return
         }
 
@@ -314,11 +155,7 @@ function App() {
       .then((encoded) => {
         const currentPhase = stateRef.current.phase
 
-        if (
-          cancelled ||
-          currentPhase.tag !== 'encoding' ||
-          currentPhase.requestId !== requestId
-        ) {
+        if (cancelled || !isCurrentRequestPhase(currentPhase, 'encoding', requestId)) {
           return
         }
 
@@ -343,11 +180,7 @@ function App() {
       .catch((caughtError) => {
         const currentPhase = stateRef.current.phase
 
-        if (
-          cancelled ||
-          currentPhase.tag !== 'encoding' ||
-          currentPhase.requestId !== requestId
-        ) {
+        if (cancelled || !isCurrentRequestPhase(currentPhase, 'encoding', requestId)) {
           return
         }
 
