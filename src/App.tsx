@@ -118,6 +118,20 @@ function App() {
     revokeResultPreview()
   }
 
+  function handleFileSelection(file: File | null) {
+    compressionGenerationRef.current++
+    setError(null)
+    clearResult()
+    setSelectedFile(file)
+    revokeSourcePreview()
+    const newUrl = file ? URL.createObjectURL(file) : null
+    sourcePreviewRef.current = newUrl
+    setSourcePreviewUrl(newUrl)
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ''
+    }
+  }
+
   function updateSettings(partial: Partial<CompressionSettings>) {
     compressionGenerationRef.current++
     clearResult()
