@@ -304,11 +304,16 @@ async function encodeImageFallback(
     }
 
     case 'webp': {
+      if (settings.webpLossless) {
+        throw new CompressionError(
+          'WebP lossless 模式依赖 WASM 编码器，浏览器降级模式无法保证无损输出。请关闭 lossless 后重试。',
+        )
+      }
       if (isCanvasMimeTypeSupported('image/webp')) {
         const bytes = await encodeWithCanvas(
           imageData,
           'image/webp',
-          settings.webpLossless ? 1.0 : quality,
+          quality,
         )
         return {
           bytes,
@@ -326,12 +331,13 @@ async function encodeImageFallback(
     }
 
     case 'avif': {
-      if (isCanvasMimeTypeSupported('image/avif')) {
-        const bytes = await encodeWithCanvas(
-          imageData,
-          'image/avif',
-          settings.avifLossless ? 1.0 : quality,
+      if (settings.avifLossless) {
+        throw new CompressionError(
+          'AVIF lossless 模式依赖 WASM 编码器，浏览器降级模式无法保证无损输出。请关闭 lossless 后重试。',
         )
+      }
+      if (isCanvasMimeTypeSupported('image/avif')) {
+        const bytes = await encodeWithCanvas(imageData, 'image/avif', quality)
         return {
           bytes,
           extension: 'avif',
