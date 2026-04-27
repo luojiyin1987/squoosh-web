@@ -120,6 +120,7 @@ function App() {
 
   function handleFileSelection(file: File | null) {
     compressionGenerationRef.current++
+    setIsCompressing(false)
     setError(null)
     clearResult()
     setSelectedFile(file)
@@ -134,6 +135,8 @@ function App() {
 
   function updateSettings(partial: Partial<CompressionSettings>) {
     compressionGenerationRef.current++
+    setIsCompressing(false)
+    setError(null)
     clearResult()
     setSettings((previous) => ({ ...previous, ...partial }))
   }
