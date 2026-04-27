@@ -63,6 +63,7 @@ function App() {
   const resultPreviewRef = useRef<string | null>(null)
   // 用 ref 追踪当前正在进行的压缩任务代数，防止旧任务覆盖新结果
   const compressionGenerationRef = useRef(0)
+  const fileInputRef = useRef<HTMLInputElement | null>(null)
 
   const fileName = selectedFile?.name ?? 'source-image'
   const activeFormatMeta = FORMAT_NOTES[settings.format]
@@ -117,14 +118,10 @@ function App() {
     revokeResultPreview()
   }
 
-  function handleFileSelection(file: File | null) {
-    setError(null)
+  function updateSettings(partial: Partial<CompressionSettings>) {
+    compressionGenerationRef.current++
     clearResult()
-    setSelectedFile(file)
-    revokeSourcePreview()
-    const newUrl = file ? URL.createObjectURL(file) : null
-    sourcePreviewRef.current = newUrl
-    setSourcePreviewUrl(newUrl)
+    setSettings((previous) => ({ ...previous, ...partial }))
   }
 
   async function handleCompress() {
@@ -256,6 +253,7 @@ function App() {
               accept="image/*"
               className="sr-only"
               type="file"
+              ref={fileInputRef}
               onChange={(event) =>
                 handleFileSelection(event.target.files?.item(0) ?? null)
               }
@@ -296,7 +294,7 @@ function App() {
                   settings.format === format ? ' format-card-active' : ''
                 }`}
                 type="button"
-                onClick={() => setSettings((previous) => ({ ...previous, format }))}
+                onClick={() => updateSettings({ format })}
               >
                 <span>{FORMAT_LABELS[format]}</span>
                 <small>{FORMAT_NOTES[format].blurb}</small>
@@ -318,10 +316,7 @@ function App() {
                     type="range"
                     value={settings.quality}
                     onChange={(event) =>
-                      setSettings((previous) => ({
-                        ...previous,
-                        quality: Number(event.target.value),
-                      }))
+                      updateSettings({ quality: Number(event.target.value) })
                     }
                   />
                   <code>{settings.quality}</code>
@@ -338,10 +333,7 @@ function App() {
                     type="range"
                     value={settings.pngLevel}
                     onChange={(event) =>
-                      setSettings((previous) => ({
-                        ...previous,
-                        pngLevel: Number(event.target.value),
-                      }))
+                      updateSettings({ pngLevel: Number(event.target.value) })
                     }
                   />
                   <code>{settings.pngLevel}</code>
@@ -354,12 +346,9 @@ function App() {
                 <input
                   checked={settings.webpLossless}
                   type="checkbox"
-                  onChange={(event) =>
-                    setSettings((previous) => ({
-                      ...previous,
-                      webpLossless: event.target.checked,
-                    }))
-                  }
+                    onChange={(event) =>
+                      updateSettings({ webpLossless: event.target.checked })
+                    }
                 />
                 <span>Use WebP lossless mode</span>
               </label>
@@ -377,10 +366,7 @@ function App() {
                       type="range"
                       value={settings.avifSpeed}
                       onChange={(event) =>
-                        setSettings((previous) => ({
-                          ...previous,
-                          avifSpeed: Number(event.target.value),
-                        }))
+                      updateSettings({ avifSpeed: Number(event.target.value) })
                       }
                     />
                     <code>{settings.avifSpeed}</code>
@@ -392,10 +378,7 @@ function App() {
                     checked={settings.avifLossless}
                     type="checkbox"
                     onChange={(event) =>
-                      setSettings((previous) => ({
-                        ...previous,
-                        avifLossless: event.target.checked,
-                      }))
+                      updateSettings({ avifLossless: event.target.checked })
                     }
                   />
                   <span>Use AVIF lossless mode</span>

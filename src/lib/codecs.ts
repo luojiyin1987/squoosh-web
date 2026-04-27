@@ -127,9 +127,12 @@ export async function fileToImageData(file: File): Promise<DecodedImage> {
     )
   }
 
+  const width = bitmap.width
+  const height = bitmap.height
+
   const canvas = document.createElement('canvas')
-  canvas.width = bitmap.width
-  canvas.height = bitmap.height
+  canvas.width = width
+  canvas.height = height
 
   const context = canvas.getContext('2d', {
     willReadFrequently: true,
@@ -155,8 +158,8 @@ export async function fileToImageData(file: File): Promise<DecodedImage> {
   }
 
   return {
-    width: canvas.width,
-    height: canvas.height,
+    width,
+    height,
     imageData,
   }
 }
