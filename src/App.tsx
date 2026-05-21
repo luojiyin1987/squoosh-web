@@ -22,20 +22,20 @@ const FORMAT_NOTES: Record<
   }
 > = {
   jpeg: {
-    blurb: '经典照片格式，压缩速度快，适合兼容性优先的输出。',
-    controlsLabel: 'MozJPEG quality',
+    blurb: 'Classic photo format, fast compression, great for compatibility-first output / 经典照片格式，压缩速度快，适合兼容性优先的输出。',
+    controlsLabel: 'MozJPEG quality / 质量',
   },
   webp: {
-    blurb: '网页通用平衡型方案，通常比 JPEG 更小，编码速度也比较可控。',
-    controlsLabel: 'WebP quality',
+    blurb: 'Balanced web format, usually smaller than JPEG with controllable encoding speed / 网页通用平衡型方案，通常比 JPEG 更小，编码速度也比较可控。',
+    controlsLabel: 'WebP quality / 质量',
   },
   avif: {
-    blurb: '压缩率通常最好，但编码明显更慢，适合追求更小体积的发布场景。',
-    controlsLabel: 'AVIF quality',
+    blurb: 'Best compression ratio, but significantly slower encoding, suitable for size-critical publishing / 压缩率通常最好，但编码明显更慢，适合追求更小体积的发布场景。',
+    controlsLabel: 'AVIF quality / 质量',
   },
   png: {
-    blurb: '无损优化，适合图标、UI 截图和需要透明通道的素材。',
-    controlsLabel: 'OxiPNG level',
+    blurb: 'Lossless optimization, suitable for icons, UI screenshots, and transparent assets / 无损优化，适合图标、UI 截图和需要透明通道的素材。',
+    controlsLabel: 'OxiPNG level / 级别',
   },
 }
 
@@ -133,7 +133,7 @@ function App() {
         const message =
           caughtError instanceof Error
             ? caughtError.message
-            : 'Compression failed in the browser.'
+            : 'Compression failed in the browser / 浏览器内压缩失败。'
 
         dispatch({ type: 'decodeError', message })
       })
@@ -187,7 +187,7 @@ function App() {
         const message =
           caughtError instanceof Error
             ? caughtError.message
-            : 'Compression failed in the browser.'
+            : 'Compression failed in the browser / 浏览器内压缩失败。'
 
         dispatch({ type: 'encodeError', message })
       })
@@ -236,27 +236,26 @@ function App() {
     <main className="app-shell">
       <section className="hero-panel">
         <p className="eyebrow">Cloudflare Pages + Browser WASM</p>
-        <h1>Squoosh codecs, entirely in the browser.</h1>
+        <h1>Squoosh codecs, entirely in the browser / 完全在浏览器中运行</h1>
         <p className="lede">
-          前端用 Vite + React 部署到 Cloudflare Pages，图片压缩在用户浏览器本地完成，
-          Cloudflare 只负责静态托管、域名和 CDN。
+          Vite + React frontend deployed to Cloudflare Pages. Image compression happens locally in the user's browser; Cloudflare only handles static hosting, domain, and CDN / 前端用 Vite + React 部署到 Cloudflare Pages，图片压缩在用户浏览器本地完成，Cloudflare 只负责静态托管、域名和 CDN。
         </p>
 
         <div className="hero-grid">
           <article className="stat-card">
-            <span className="stat-kicker">Runtime</span>
-            <strong>Local only</strong>
-            <p>原图不上传服务器，浏览器内完成解码、编码和下载。</p>
+            <span className="stat-kicker">Runtime / 运行环境</span>
+            <strong>Local only / 纯本地</strong>
+            <p>Original images are never uploaded; decode, encode, and download happen in the browser / 原图不上传服务器，浏览器内完成解码、编码和下载。</p>
           </article>
           <article className="stat-card">
-            <span className="stat-kicker">Deploy</span>
-            <strong>Static Pages</strong>
-            <p>构建产物是纯静态 dist/，适合直接接入 Cloudflare Pages。</p>
+            <span className="stat-kicker">Deploy / 部署</span>
+            <strong>Static Pages / 静态页面</strong>
+            <p>Build output is pure static dist/, ready for Cloudflare Pages / 构建产物是纯静态 dist/，适合直接接入 Cloudflare Pages。</p>
           </article>
           <article className="stat-card">
-            <span className="stat-kicker">Codecs</span>
+            <span className="stat-kicker">Codecs / 编码器</span>
             <strong>MozJPEG / WebP / AVIF / OxiPNG</strong>
-            <p>按需懒加载 Squoosh 衍生的 WASM 编码器，避免首屏一次性拉满。</p>
+            <p>Lazy-load Squoosh-derived WASM encoders on demand to avoid a heavy first paint / 按需懒加载 Squoosh 衍生的 WASM 编码器，避免首屏一次性拉满。</p>
           </article>
         </div>
       </section>
@@ -265,8 +264,8 @@ function App() {
         <div className="panel">
           <div className="panel-heading">
             <div>
-              <p className="section-label">1. Source image</p>
-              <h2>拖入图片或手动选择</h2>
+              <p className="section-label">1. Source image / 源图片</p>
+              <h2>Drop or select an image / 拖入图片或手动选择</h2>
             </div>
             {selectedFile ? (
               <button
@@ -274,7 +273,7 @@ function App() {
                 type="button"
                 onClick={() => handleFileSelection(null)}
               >
-                Clear
+                Clear / 清除
               </button>
             ) : null}
           </div>
@@ -295,19 +294,19 @@ function App() {
                 handleFileSelection(event.target.files?.item(0) ?? null)
               }
             />
-            <span className="dropzone-pill">Local processing only</span>
-            <strong>{selectedFile ? selectedFile.name : 'Drop an image here'}</strong>
+            <span className="dropzone-pill">Local processing only / 仅本地处理</span>
+            <strong>{selectedFile ? selectedFile.name : 'Drop an image here / 拖入图片'}</strong>
             <span>
               {selectedFile
-                ? `${formatBytes(selectedFile.size)} · ready to compress`
-                : 'PNG, JPEG, WebP, AVIF and other browser-readable image types'}
+                ? `${formatBytes(selectedFile.size)} · ready to compress / 准备压缩`
+                : 'PNG, JPEG, WebP, AVIF and other browser-readable image types / PNG、JPEG、WebP、AVIF 等浏览器可读取的图片格式'}
             </span>
           </label>
 
           {sourcePreviewUrl ? (
             <div className="preview-stack">
               <img
-                alt="Selected source"
+                alt="Selected source / 已选源图"
                 className="preview-image"
                 src={sourcePreviewUrl}
               />
@@ -318,8 +317,8 @@ function App() {
         <div className="panel">
           <div className="panel-heading">
             <div>
-              <p className="section-label">2. Output codec</p>
-              <h2>选择编码器和参数</h2>
+              <p className="section-label">2. Output codec / 输出编码器</p>
+              <h2>Select codec and parameters / 选择编码器和参数</h2>
             </div>
           </div>
 
@@ -361,7 +360,7 @@ function App() {
               </label>
             ) : (
               <label className="field">
-                <span>OxiPNG level</span>
+                <span>OxiPNG level / 级别</span>
                 <div className="field-row">
                   <input
                     max={6}
@@ -387,14 +386,14 @@ function App() {
                     updateSettings({ webpLossless: event.target.checked })
                   }
                 />
-                <span>Use WebP lossless mode</span>
+                <span>Use WebP lossless mode / WebP 无损模式</span>
               </label>
             ) : null}
 
             {state.settings.format === 'avif' ? (
               <>
                 <label className="field">
-                  <span>AVIF speed</span>
+                  <span>AVIF speed / 速度</span>
                   <div className="field-row">
                     <input
                       max={10}
@@ -418,7 +417,7 @@ function App() {
                       updateSettings({ avifLossless: event.target.checked })
                     }
                   />
-                  <span>Use AVIF lossless mode</span>
+                  <span>Use AVIF lossless mode / AVIF 无损模式</span>
                 </label>
               </>
             ) : null}
@@ -430,11 +429,11 @@ function App() {
             type="button"
             onClick={handleCompress}
           >
-            {isCompressing ? 'Compressing in browser...' : 'Run compression'}
+            {isCompressing ? 'Compressing in browser... / 正在浏览器中压缩...' : 'Run compression / 运行压缩'}
           </button>
 
           <p className="panel-note">
-            重新编码后的图片不会保留原始 EXIF / ICC 元数据，这通常是纯前端压缩工具的默认结果。
+            Re-encoded images will not retain original EXIF / ICC metadata, which is the default for pure front-end compression tools / 重新编码后的图片不会保留原始 EXIF / ICC 元数据，这通常是纯前端压缩工具的默认结果。
           </p>
 
           {error ? <p className="error-banner">{error}</p> : null}
@@ -444,8 +443,8 @@ function App() {
       <section className="panel result-panel">
         <div className="panel-heading">
           <div>
-            <p className="section-label">3. Result</p>
-            <h2>压缩结果和下载</h2>
+            <p className="section-label">3. Result / 结果</p>
+            <h2>Compression result and download / 压缩结果和下载</h2>
           </div>
         </div>
 
@@ -453,15 +452,15 @@ function App() {
           <>
             <div className="result-stats">
               <article>
-                <span>Input</span>
+                <span>Input / 输入</span>
                 <strong>{formatBytes(result.inputBytes)}</strong>
               </article>
               <article>
-                <span>Output</span>
+                <span>Output / 输出</span>
                 <strong>{formatBytes(result.outputBytes)}</strong>
               </article>
               <article>
-                <span>Delta</span>
+                <span>Delta / 差值</span>
                 <strong
                   className={
                     resultSummary && resultSummary.delta >= 0 ? 'good' : 'warn'
@@ -472,17 +471,17 @@ function App() {
                 </strong>
               </article>
               <article>
-                <span>Time</span>
+                <span>Time / 耗时</span>
                 <strong>{formatDuration(result.elapsedMs)}</strong>
               </article>
             </div>
 
             <div className="preview-grid">
               <div className="preview-card">
-                <span className="preview-label">Source</span>
+                <span className="preview-label">Source / 原图</span>
                 {sourcePreviewUrl ? (
                   <img
-                    alt="Source preview"
+                    alt="Source preview / 原图预览"
                     className="preview-image"
                     src={sourcePreviewUrl}
                   />
@@ -491,10 +490,10 @@ function App() {
 
               <div className="preview-card">
                 <span className="preview-label">
-                  {FORMAT_LABELS[result.format]} output
+                  {FORMAT_LABELS[result.format]} output / 输出
                 </span>
                 <img
-                  alt={`${FORMAT_LABELS[result.format]} preview`}
+                  alt={`${FORMAT_LABELS[result.format]} preview / 预览`}
                   className="preview-image"
                   src={result.previewUrl}
                 />
@@ -503,7 +502,7 @@ function App() {
 
             <div className="result-meta">
               <p>
-                输出格式：<strong>{FORMAT_LABELS[result.format]}</strong> · 尺寸：
+                Output format / 输出格式：<strong>{FORMAT_LABELS[result.format]}</strong> · Dimensions / 尺寸：
                 <strong>
                   {' '}
                   {result.width} × {result.height}
@@ -512,8 +511,8 @@ function App() {
               </p>
               <p>
                 {resultSummary && resultSummary.delta >= 0
-                  ? `体积缩小 ${(resultSummary.ratio * 100).toFixed(1)}%`
-                  : `输出比原图大 ${((resultSummary?.ratio ?? 0) * 100).toFixed(1)}%，这在无损 PNG 或高质量 AVIF/WebP 下是正常现象`}
+                  ? `Size reduced by / 体积缩小 ${(resultSummary.ratio * 100).toFixed(1)}%`
+                  : `Output larger by / 输出比原图大 ${((resultSummary?.ratio ?? 0) * 100).toFixed(1)}% — this is normal for lossless PNG or high-quality AVIF/WebP / 这在无损 PNG 或高质量 AVIF/WebP 下是正常现象`}
               </p>
             </div>
 
@@ -522,12 +521,12 @@ function App() {
               download={buildDownloadName(fileName, result.extension)}
               href={result.previewUrl}
             >
-              Download compressed image
+              Download compressed image / 下载压缩图片
             </a>
           </>
         ) : (
           <div className="empty-state">
-            <p>选择图片并运行压缩后，这里会显示预览、体积变化和下载链接。</p>
+            <p>Select an image and run compression; preview, size change, and download link will appear here / 选择图片并运行压缩后，这里会显示预览、体积变化和下载链接。</p>
           </div>
         )}
       </section>
