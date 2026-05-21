@@ -300,23 +300,7 @@ function App() {
         <h1>{t('hero.title')}</h1>
         <p className="lede">{t('hero.lede')}</p>
 
-        <div className="hero-grid">
-          <article className="stat-card">
-            <span className="stat-kicker">{t('hero.runtimeTitle')}</span>
-            <strong>{t('hero.runtimeValue')}</strong>
-            <p>{t('hero.runtimeDesc')}</p>
-          </article>
-          <article className="stat-card">
-            <span className="stat-kicker">{t('hero.deployTitle')}</span>
-            <strong>{t('hero.deployValue')}</strong>
-            <p>{t('hero.deployDesc')}</p>
-          </article>
-          <article className="stat-card">
-            <span className="stat-kicker">{t('hero.codecsTitle')}</span>
-            <strong>{t('hero.codecsValue')}</strong>
-            <p>{t('hero.codecsDesc')}</p>
-          </article>
-        </div>
+
       </section>
 
       <section className="workspace">

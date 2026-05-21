@@ -10,16 +10,7 @@ const en: Translations = {
   // Hero
   'hero.eyebrow': 'Cloudflare Pages + Browser WASM',
   'hero.title': 'Squoosh codecs, entirely in the browser',
-  'hero.lede': 'Vite + React frontend deployed to Cloudflare Pages. Image compression happens locally in the user\'s browser; Cloudflare only handles static hosting, domain, and CDN.',
-  'hero.runtimeTitle': 'Runtime',
-  'hero.runtimeValue': 'Local only',
-  'hero.runtimeDesc': 'Original images are never uploaded; decode, encode, and download happen in the browser.',
-  'hero.deployTitle': 'Deploy',
-  'hero.deployValue': 'Static Pages',
-  'hero.deployDesc': 'Build output is pure static dist/, ready for Cloudflare Pages.',
-  'hero.codecsTitle': 'Codecs',
-  'hero.codecsValue': 'MozJPEG / WebP / AVIF / OxiPNG',
-  'hero.codecsDesc': 'Lazy-load Squoosh-derived WASM encoders on demand to avoid a heavy first paint.',
+  'hero.lede': 'Compress JPEG, WebP, AVIF and PNG locally in your browser. No server upload, instant results.',
 
   // Source panel
   'source.label': '1. Source image',
@@ -83,16 +74,7 @@ const zh: Translations = {
   // Hero
   'hero.eyebrow': 'Cloudflare Pages + 浏览器 WASM',
   'hero.title': 'Squoosh 编解码器，完全在浏览器中运行',
-  'hero.lede': '使用 Vite + React 前端部署到 Cloudflare Pages。图片压缩在用户浏览器本地完成；Cloudflare 只负责静态托管、域名和 CDN。',
-  'hero.runtimeTitle': '运行环境',
-  'hero.runtimeValue': '纯本地',
-  'hero.runtimeDesc': '原图不上传服务器，浏览器内完成解码、编码和下载。',
-  'hero.deployTitle': '部署',
-  'hero.deployValue': '静态页面',
-  'hero.deployDesc': '构建产物是纯静态 dist/，适合直接接入 Cloudflare Pages。',
-  'hero.codecsTitle': '编码器',
-  'hero.codecsValue': 'MozJPEG / WebP / AVIF / OxiPNG',
-  'hero.codecsDesc': '按需懒加载 Squoosh 衍生的 WASM 编码器，避免首屏一次性拉满。',
+  'hero.lede': '在浏览器本地压缩 JPEG、WebP、AVIF 和 PNG 图片。无需上传服务器，即时出结果。',
 
   // Source panel
   'source.label': '1. 源图片',
