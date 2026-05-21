@@ -13,35 +13,38 @@ import {
   INITIAL_COMPRESSION_STATE,
   isCurrentRequestPhase,
 } from './lib/compression-state'
-
-const FORMAT_NOTES: Record<
-  CompressionFormat,
-  {
-    blurb: string
-    controlsLabel: string
-  }
-> = {
-  jpeg: {
-    blurb: 'Classic photo format, fast compression, great for compatibility-first output / 经典照片格式，压缩速度快，适合兼容性优先的输出。',
-    controlsLabel: 'MozJPEG quality / 质量',
-  },
-  webp: {
-    blurb: 'Balanced web format, usually smaller than JPEG with controllable encoding speed / 网页通用平衡型方案，通常比 JPEG 更小，编码速度也比较可控。',
-    controlsLabel: 'WebP quality / 质量',
-  },
-  avif: {
-    blurb: 'Best compression ratio, but significantly slower encoding, suitable for size-critical publishing / 压缩率通常最好，但编码明显更慢，适合追求更小体积的发布场景。',
-    controlsLabel: 'AVIF quality / 质量',
-  },
-  png: {
-    blurb: 'Lossless optimization, suitable for icons, UI screenshots, and transparent assets / 无损优化，适合图标、UI 截图和需要透明通道的素材。',
-    controlsLabel: 'OxiPNG level / 级别',
-  },
-}
+import { useLocale } from './lib/i18n.tsx'
 
 const FORMAT_ORDER: CompressionFormat[] = ['webp', 'avif', 'jpeg', 'png']
 
+function LangSwitch() {
+  const { locale, setLocale, t } = useLocale()
+
+  return (
+    <div className="lang-switch" role="group" aria-label="Language switch">
+      <button
+        type="button"
+        className={locale === 'en' ? 'lang-active' : ''}
+        onClick={() => setLocale('en')}
+        aria-pressed={locale === 'en'}
+      >
+        {t('lang.en')}
+      </button>
+      <span className="lang-divider">|</span>
+      <button
+        type="button"
+        className={locale === 'zh' ? 'lang-active' : ''}
+        onClick={() => setLocale('zh')}
+        aria-pressed={locale === 'zh'}
+      >
+        {t('lang.zh')}
+      </button>
+    </div>
+  )
+}
+
 function App() {
+  const { locale, t } = useLocale()
   const [state, dispatch] = useReducer(
     compressionReducer,
     INITIAL_COMPRESSION_STATE,
@@ -58,7 +61,6 @@ function App() {
     state.phase.tag === 'decoding' || state.phase.tag === 'encoding'
 
   const fileName = selectedFile?.name ?? 'source-image'
-  const activeFormatMeta = FORMAT_NOTES[state.settings.format]
   const resultPreviewUrl = result?.previewUrl ?? null
   const decodeRequestId =
     state.phase.tag === 'decoding' ? state.phase.requestId : null
@@ -66,6 +68,33 @@ function App() {
     state.phase.tag === 'encoding' ? state.phase.requestId : null
   const decodingPhase = state.phase.tag === 'decoding' ? state.phase : null
   const encodingPhase = state.phase.tag === 'encoding' ? state.phase : null
+
+  const formatNotes = useMemo(() => {
+    const notes: Record<
+      CompressionFormat,
+      { blurb: string; controlsLabel: string }
+    > = {
+      jpeg: {
+        blurb: t('codec.jpegBlurb'),
+        controlsLabel: t('codec.jpegLabel'),
+      },
+      webp: {
+        blurb: t('codec.webpBlurb'),
+        controlsLabel: t('codec.webpLabel'),
+      },
+      avif: {
+        blurb: t('codec.avifBlurb'),
+        controlsLabel: t('codec.avifLabel'),
+      },
+      png: {
+        blurb: t('codec.pngBlurb'),
+        controlsLabel: t('codec.pngLabel'),
+      },
+    }
+    return notes
+  }, [t])
+
+  const activeFormatMeta = formatNotes[state.settings.format]
 
   const resultSummary = useMemo(() => {
     if (!result) {
@@ -80,6 +109,22 @@ function App() {
       ratio,
     }
   }, [result])
+
+  // Update document title and meta description when locale changes
+  useEffect(() => {
+    const title = locale === 'zh'
+      ? 'Squoosh Web | 浏览器本地图片压缩'
+      : 'Squoosh Web | Browser-local Image Compression'
+    const desc = locale === 'zh'
+      ? 'Squoosh Web — 浏览器本地图片压缩工具。使用 Squoosh 衍生 WASM 编码器压缩 JPEG、WebP、AVIF 和 PNG。Cloudflare Pages 托管。'
+      : 'Squoosh Web — Browser-local image compression tool. Compress JPEG, WebP, AVIF and PNG using Squoosh-derived WASM encoders. Hosted on Cloudflare Pages.'
+
+    document.title = title
+    const metaDesc = document.querySelector('meta[name="description"]')
+    if (metaDesc) {
+      metaDesc.setAttribute('content', desc)
+    }
+  }, [locale])
 
   useEffect(() => {
     stateRef.current = state
@@ -133,7 +178,7 @@ function App() {
         const message =
           caughtError instanceof Error
             ? caughtError.message
-            : 'Compression failed in the browser / 浏览器内压缩失败。'
+            : t('error.compressionFailed')
 
         dispatch({ type: 'decodeError', message })
       })
@@ -141,7 +186,7 @@ function App() {
     return () => {
       cancelled = true
     }
-  }, [decodeRequestId, decodingPhase])
+  }, [decodeRequestId, decodingPhase, t])
 
   useEffect(() => {
     if (!encodingPhase) {
@@ -187,7 +232,7 @@ function App() {
         const message =
           caughtError instanceof Error
             ? caughtError.message
-            : 'Compression failed in the browser / 浏览器内压缩失败。'
+            : t('error.compressionFailed')
 
         dispatch({ type: 'encodeError', message })
       })
@@ -195,7 +240,7 @@ function App() {
     return () => {
       cancelled = true
     }
-  }, [encodeRequestId, encodingPhase])
+  }, [encodeRequestId, encodingPhase, t])
 
   function handleFileSelection(file: File | null) {
     if (sourcePreviewUrl) {
@@ -234,28 +279,28 @@ function App() {
 
   return (
     <main className="app-shell">
+      <LangSwitch />
+
       <section className="hero-panel">
-        <p className="eyebrow">Cloudflare Pages + Browser WASM</p>
-        <h1>Squoosh codecs, entirely in the browser / 完全在浏览器中运行</h1>
-        <p className="lede">
-          Vite + React frontend deployed to Cloudflare Pages. Image compression happens locally in the user's browser; Cloudflare only handles static hosting, domain, and CDN / 前端用 Vite + React 部署到 Cloudflare Pages，图片压缩在用户浏览器本地完成，Cloudflare 只负责静态托管、域名和 CDN。
-        </p>
+        <p className="eyebrow">{t('hero.eyebrow')}</p>
+        <h1>{t('hero.title')}</h1>
+        <p className="lede">{t('hero.lede')}</p>
 
         <div className="hero-grid">
           <article className="stat-card">
-            <span className="stat-kicker">Runtime / 运行环境</span>
-            <strong>Local only / 纯本地</strong>
-            <p>Original images are never uploaded; decode, encode, and download happen in the browser / 原图不上传服务器，浏览器内完成解码、编码和下载。</p>
+            <span className="stat-kicker">{t('hero.runtimeTitle')}</span>
+            <strong>{t('hero.runtimeValue')}</strong>
+            <p>{t('hero.runtimeDesc')}</p>
           </article>
           <article className="stat-card">
-            <span className="stat-kicker">Deploy / 部署</span>
-            <strong>Static Pages / 静态页面</strong>
-            <p>Build output is pure static dist/, ready for Cloudflare Pages / 构建产物是纯静态 dist/，适合直接接入 Cloudflare Pages。</p>
+            <span className="stat-kicker">{t('hero.deployTitle')}</span>
+            <strong>{t('hero.deployValue')}</strong>
+            <p>{t('hero.deployDesc')}</p>
           </article>
           <article className="stat-card">
-            <span className="stat-kicker">Codecs / 编码器</span>
-            <strong>MozJPEG / WebP / AVIF / OxiPNG</strong>
-            <p>Lazy-load Squoosh-derived WASM encoders on demand to avoid a heavy first paint / 按需懒加载 Squoosh 衍生的 WASM 编码器，避免首屏一次性拉满。</p>
+            <span className="stat-kicker">{t('hero.codecsTitle')}</span>
+            <strong>{t('hero.codecsValue')}</strong>
+            <p>{t('hero.codecsDesc')}</p>
           </article>
         </div>
       </section>
@@ -264,8 +309,8 @@ function App() {
         <div className="panel">
           <div className="panel-heading">
             <div>
-              <p className="section-label">1. Source image / 源图片</p>
-              <h2>Drop or select an image / 拖入图片或手动选择</h2>
+              <p className="section-label">{t('source.label')}</p>
+              <h2>{t('source.heading')}</h2>
             </div>
             {selectedFile ? (
               <button
@@ -273,7 +318,7 @@ function App() {
                 type="button"
                 onClick={() => handleFileSelection(null)}
               >
-                Clear / 清除
+                {t('source.clear')}
               </button>
             ) : null}
           </div>
@@ -294,19 +339,19 @@ function App() {
                 handleFileSelection(event.target.files?.item(0) ?? null)
               }
             />
-            <span className="dropzone-pill">Local processing only / 仅本地处理</span>
-            <strong>{selectedFile ? selectedFile.name : 'Drop an image here / 拖入图片'}</strong>
+            <span className="dropzone-pill">{t('source.dropzonePill')}</span>
+            <strong>{selectedFile ? selectedFile.name : t('source.dropzoneHint')}</strong>
             <span>
               {selectedFile
-                ? `${formatBytes(selectedFile.size)} · ready to compress / 准备压缩`
-                : 'PNG, JPEG, WebP, AVIF and other browser-readable image types / PNG、JPEG、WebP、AVIF 等浏览器可读取的图片格式'}
+                ? `${formatBytes(selectedFile.size)} · ${t('source.dropzoneReady')}`
+                : t('source.dropzoneFormats')}
             </span>
           </label>
 
           {sourcePreviewUrl ? (
             <div className="preview-stack">
               <img
-                alt="Selected source / 已选源图"
+                alt={t('source.previewAlt')}
                 className="preview-image"
                 src={sourcePreviewUrl}
               />
@@ -317,8 +362,8 @@ function App() {
         <div className="panel">
           <div className="panel-heading">
             <div>
-              <p className="section-label">2. Output codec / 输出编码器</p>
-              <h2>Select codec and parameters / 选择编码器和参数</h2>
+              <p className="section-label">{t('codec.label')}</p>
+              <h2>{t('codec.heading')}</h2>
             </div>
           </div>
 
@@ -333,7 +378,7 @@ function App() {
                 onClick={() => updateSettings({ format })}
               >
                 <span>{FORMAT_LABELS[format]}</span>
-                <small>{FORMAT_NOTES[format].blurb}</small>
+                <small>{formatNotes[format].blurb}</small>
               </button>
             ))}
           </div>
@@ -360,7 +405,7 @@ function App() {
               </label>
             ) : (
               <label className="field">
-                <span>OxiPNG level / 级别</span>
+                <span>{activeFormatMeta.controlsLabel}</span>
                 <div className="field-row">
                   <input
                     max={6}
@@ -386,14 +431,14 @@ function App() {
                     updateSettings({ webpLossless: event.target.checked })
                   }
                 />
-                <span>Use WebP lossless mode / WebP 无损模式</span>
+                <span>{t('controls.webpLossless')}</span>
               </label>
             ) : null}
 
             {state.settings.format === 'avif' ? (
               <>
                 <label className="field">
-                  <span>AVIF speed / 速度</span>
+                  <span>{t('controls.avifSpeed')}</span>
                   <div className="field-row">
                     <input
                       max={10}
@@ -417,7 +462,7 @@ function App() {
                       updateSettings({ avifLossless: event.target.checked })
                     }
                   />
-                  <span>Use AVIF lossless mode / AVIF 无损模式</span>
+                  <span>{t('controls.avifLossless')}</span>
                 </label>
               </>
             ) : null}
@@ -429,12 +474,10 @@ function App() {
             type="button"
             onClick={handleCompress}
           >
-            {isCompressing ? 'Compressing in browser... / 正在浏览器中压缩...' : 'Run compression / 运行压缩'}
+            {isCompressing ? t('compress.running') : t('compress.run')}
           </button>
 
-          <p className="panel-note">
-            Re-encoded images will not retain original EXIF / ICC metadata, which is the default for pure front-end compression tools / 重新编码后的图片不会保留原始 EXIF / ICC 元数据，这通常是纯前端压缩工具的默认结果。
-          </p>
+          <p className="panel-note">{t('panel.note')}</p>
 
           {error ? <p className="error-banner">{error}</p> : null}
         </div>
@@ -443,8 +486,8 @@ function App() {
       <section className="panel result-panel">
         <div className="panel-heading">
           <div>
-            <p className="section-label">3. Result / 结果</p>
-            <h2>Compression result and download / 压缩结果和下载</h2>
+            <p className="section-label">{t('result.label')}</p>
+            <h2>{t('result.heading')}</h2>
           </div>
         </div>
 
@@ -452,15 +495,15 @@ function App() {
           <>
             <div className="result-stats">
               <article>
-                <span>Input / 输入</span>
+                <span>{t('result.input')}</span>
                 <strong>{formatBytes(result.inputBytes)}</strong>
               </article>
               <article>
-                <span>Output / 输出</span>
+                <span>{t('result.output')}</span>
                 <strong>{formatBytes(result.outputBytes)}</strong>
               </article>
               <article>
-                <span>Delta / 差值</span>
+                <span>{t('result.delta')}</span>
                 <strong
                   className={
                     resultSummary && resultSummary.delta >= 0 ? 'good' : 'warn'
@@ -471,17 +514,17 @@ function App() {
                 </strong>
               </article>
               <article>
-                <span>Time / 耗时</span>
+                <span>{t('result.time')}</span>
                 <strong>{formatDuration(result.elapsedMs)}</strong>
               </article>
             </div>
 
             <div className="preview-grid">
               <div className="preview-card">
-                <span className="preview-label">Source / 原图</span>
+                <span className="preview-label">{t('result.sourceLabel')}</span>
                 {sourcePreviewUrl ? (
                   <img
-                    alt="Source preview / 原图预览"
+                    alt={t('result.sourceLabel')}
                     className="preview-image"
                     src={sourcePreviewUrl}
                   />
@@ -490,10 +533,10 @@ function App() {
 
               <div className="preview-card">
                 <span className="preview-label">
-                  {FORMAT_LABELS[result.format]} output / 输出
+                  {FORMAT_LABELS[result.format]} {t('result.outputLabel')}
                 </span>
                 <img
-                  alt={`${FORMAT_LABELS[result.format]} preview / 预览`}
+                  alt={`${FORMAT_LABELS[result.format]} ${t('result.outputLabel')}`}
                   className="preview-image"
                   src={result.previewUrl}
                 />
@@ -502,17 +545,17 @@ function App() {
 
             <div className="result-meta">
               <p>
-                Output format / 输出格式：<strong>{FORMAT_LABELS[result.format]}</strong> · Dimensions / 尺寸：
+                {t('result.formatOutput')}：<strong>{FORMAT_LABELS[result.format]}</strong> · {t('result.dimensions')}：
                 <strong>
                   {' '}
                   {result.width} × {result.height}
                 </strong>{' '}
-                · MIME：<code>{result.mimeType}</code>
+                · {t('result.mime')}：<code>{result.mimeType}</code>
               </p>
               <p>
                 {resultSummary && resultSummary.delta >= 0
-                  ? `Size reduced by / 体积缩小 ${(resultSummary.ratio * 100).toFixed(1)}%`
-                  : `Output larger by / 输出比原图大 ${((resultSummary?.ratio ?? 0) * 100).toFixed(1)}% — this is normal for lossless PNG or high-quality AVIF/WebP / 这在无损 PNG 或高质量 AVIF/WebP 下是正常现象`}
+                  ? `${t('result.sizeReduced')} ${(resultSummary.ratio * 100).toFixed(1)}%`
+                  : `${t('result.sizeIncreased')} ${((resultSummary?.ratio ?? 0) * 100).toFixed(1)}% — ${t('result.sizeIncreasedNote')}`}
               </p>
             </div>
 
@@ -521,12 +564,12 @@ function App() {
               download={buildDownloadName(fileName, result.extension)}
               href={result.previewUrl}
             >
-              Download compressed image / 下载压缩图片
+              {t('result.download')}
             </a>
           </>
         ) : (
           <div className="empty-state">
-            <p>Select an image and run compression; preview, size change, and download link will appear here / 选择图片并运行压缩后，这里会显示预览、体积变化和下载链接。</p>
+            <p>{t('result.emptyState')}</p>
           </div>
         )}
       </section>
