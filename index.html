@@ -2,13 +2,78 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <!-- 基础 SEO -->
+    <title>Squoosh Web | Browser-local Image Compression</title>
     <meta
       name="description"
-      content="Squoosh Web — Browser-local image compression tool. Compress JPEG, WebP, AVIF and PNG using Squoosh-derived WASM encoders. Hosted on Cloudflare Pages."
+      content="Compress JPEG, WebP, AVIF and PNG locally in your browser using Squoosh-derived WASM encoders. No server upload, pure front-end processing."
     />
-    <title>Squoosh Web | Browser-local Image Compression</title>
+    <meta name="keywords" content="image compression, jpeg compressor, webp converter, avif encoder, png optimizer, squoosh, browser wasm, cloudflare pages, local image processing" />
+    <meta name="author" content="Squoosh Web" />
+    <meta name="robots" content="index, follow" />
+    <meta name="theme-color" content="#ea580c" />
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="apple-touch-icon" href="/favicon.svg" />
+
+    <!-- Canonical -->
+    <link rel="canonical" href="https://squoosh-web.pages.dev/" />
+
+    <!-- Hreflang (SPA 单页应用，使用 x-default 指向同一 URL) -->
+    <link rel="alternate" hreflang="x-default" href="https://squoosh-web.pages.dev/" />
+    <link rel="alternate" hreflang="en" href="https://squoosh-web.pages.dev/" />
+    <link rel="alternate" hreflang="zh-CN" href="https://squoosh-web.pages.dev/" />
+
+    <!-- Open Graph (默认英文，JS 会根据用户语言动态更新) -->
+    <meta property="og:title" content="Squoosh Web | Browser-local Image Compression" />
+    <meta property="og:description" content="Compress JPEG, WebP, AVIF and PNG locally in your browser using Squoosh-derived WASM encoders." />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://squoosh-web.pages.dev/" />
+    <meta property="og:image" content="https://squoosh-web.pages.dev/og-image.svg" />
+    <meta property="og:image:type" content="image/svg+xml" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:site_name" content="Squoosh Web" />
+    <meta property="og:locale" content="en_US" />
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Squoosh Web | Browser-local Image Compression" />
+    <meta name="twitter:description" content="Compress JPEG, WebP, AVIF and PNG locally in your browser using Squoosh-derived WASM encoders." />
+    <meta name="twitter:image" content="https://squoosh-web.pages.dev/og-image.svg" />
+
+    <!-- Structured Data: WebApplication -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebApplication",
+      "name": "Squoosh Web",
+      "description": "Browser-local image compression tool. Compress JPEG, WebP, AVIF and PNG using Squoosh-derived WASM encoders.",
+      "applicationCategory": "UtilityApplication",
+      "operatingSystem": "Any",
+      "browserRequirements": "Requires modern browser with WebAssembly support",
+      "url": "https://squoosh-web.pages.dev/",
+      "image": "https://squoosh-web.pages.dev/og-image.svg",
+      "inLanguage": ["en", "zh-CN"],
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "USD"
+      },
+      "featureList": [
+        "Browser-local image compression",
+        "JPEG encoding with MozJPEG",
+        "WebP encoding",
+        "AVIF encoding",
+        "PNG optimization with OxiPNG",
+        "No server upload required",
+        "Privacy-focused processing"
+      ]
+    }
+    </script>
   </head>
   <body>
     <div id="root"></div>

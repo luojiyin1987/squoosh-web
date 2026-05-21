@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+Disallow: /assets/*.wasm
+
+Sitemap: https://squoosh-web.pages.dev/sitemap.xml

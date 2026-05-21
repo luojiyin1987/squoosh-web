@@ -110,20 +110,34 @@ function App() {
     }
   }, [result])
 
-  // Update document title and meta description when locale changes
+  // SEO: Update all meta tags when locale changes
   useEffect(() => {
-    const title = locale === 'zh'
+    const isZh = locale === 'zh'
+    const title = isZh
       ? 'Squoosh Web | 浏览器本地图片压缩'
       : 'Squoosh Web | Browser-local Image Compression'
-    const desc = locale === 'zh'
-      ? 'Squoosh Web — 浏览器本地图片压缩工具。使用 Squoosh 衍生 WASM 编码器压缩 JPEG、WebP、AVIF 和 PNG。Cloudflare Pages 托管。'
-      : 'Squoosh Web — Browser-local image compression tool. Compress JPEG, WebP, AVIF and PNG using Squoosh-derived WASM encoders. Hosted on Cloudflare Pages.'
+    const desc = isZh
+      ? 'Squoosh Web — 浏览器本地图片压缩工具。使用 Squoosh 衍生 WASM 编码器压缩 JPEG、WebP、AVIF 和 PNG。'
+      : 'Compress JPEG, WebP, AVIF and PNG locally in your browser using Squoosh-derived WASM encoders.'
 
     document.title = title
-    const metaDesc = document.querySelector('meta[name="description"]')
-    if (metaDesc) {
-      metaDesc.setAttribute('content', desc)
+
+    function setMeta(selector: string, attr: string, value: string) {
+      const el = document.querySelector(selector)
+      if (el) el.setAttribute(attr, value)
     }
+
+    // Standard
+    setMeta('meta[name="description"]', 'content', desc)
+
+    // Open Graph
+    setMeta('meta[property="og:title"]', 'content', title)
+    setMeta('meta[property="og:description"]', 'content', desc)
+    setMeta('meta[property="og:locale"]', 'content', isZh ? 'zh_CN' : 'en_US')
+
+    // Twitter Card
+    setMeta('meta[name="twitter:title"]', 'content', title)
+    setMeta('meta[name="twitter:description"]', 'content', desc)
   }, [locale])
 
   useEffect(() => {
