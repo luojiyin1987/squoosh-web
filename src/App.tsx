@@ -345,6 +345,9 @@ function App() {
     setSourcePreviewUrl(firstFile ? URL.createObjectURL(firstFile) : null)
     invalidateFolderCompression()
     setFolderFiles(images)
+    if (images.length === 0) {
+      setFolderError(t('folder.noSupportedImages'))
+    }
     dispatch({ type: 'selectFile', file: firstFile })
   }
 
@@ -658,18 +661,9 @@ function App() {
             ) : null}
           </div>
 
-          <button
-            className="primary-button"
-            disabled={!selectedFile || isCompressing || isFolderCompressing}
-            type="button"
-            onClick={handleCompress}
-          >
-            {isCompressing ? t('compress.running') : t('compress.run')}
-          </button>
-
           {hasFolder ? (
             <button
-              className="secondary-button"
+              className="primary-button"
               disabled={isCompressing || isFolderCompressing}
               type="button"
               onClick={handleFolderCompress}
@@ -678,7 +672,16 @@ function App() {
                 ? t('folder.running')
                 : t('folder.compress').replace('{count}', String(folderFiles.length))}
             </button>
-          ) : null}
+          ) : (
+            <button
+              className="primary-button"
+              disabled={!selectedFile || isCompressing}
+              type="button"
+              onClick={handleCompress}
+            >
+              {isCompressing ? t('compress.running') : t('compress.run')}
+            </button>
+          )}
 
           {isFolderCompressing ? (
             <p className="panel-note">

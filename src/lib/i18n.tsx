@@ -53,6 +53,7 @@ const en: Translations = {
   'folder.resultNote': 'The ZIP file keeps the selected folder structure. Files that fail to decode are skipped.',
   'folder.download': 'Download compressed ZIP',
   'folder.noCompressibleImages': 'No image in this folder could be compressed.',
+  'folder.noSupportedImages': 'No supported image was found. This tool only compresses image files.',
 
   // Notes
   'panel.note': 'Re-encoded images will not retain original EXIF / ICC metadata, which is the default for pure front-end compression tools.',
@@ -128,6 +129,7 @@ const zh: Translations = {
   'folder.resultNote': 'ZIP 文件会保留所选文件夹的目录结构。无法解码的文件会被跳过。',
   'folder.download': '下载压缩后的 ZIP',
   'folder.noCompressibleImages': '文件夹中没有可压缩的图片。',
+  'folder.noSupportedImages': '没有找到可识别的图片。此工具只能压缩图片文件。',
 
   // Notes
   'panel.note': '重新编码后的图片不会保留原始 EXIF / ICC 元数据，这通常是纯前端压缩工具的默认结果。',
