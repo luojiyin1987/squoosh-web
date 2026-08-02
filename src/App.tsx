@@ -360,6 +360,7 @@ function App() {
   }
 
   function updateSettings(partial: Partial<CompressionSettings>) {
+    resetFolderResult()
     dispatch({ type: 'updateSettings', partial })
   }
 
