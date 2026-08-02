@@ -8,6 +8,7 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
+    "test": "vitest run",
     "preview": "vite preview",
     "cf:project:create": "wrangler pages project create squoosh-web --production-branch=main",
     "cf:dev": "pnpm build && wrangler pages dev",
@@ -36,6 +37,7 @@
     "typescript": "~6.0.2",
     "typescript-eslint": "^8.58.0",
     "vite": "^8.0.4",
+    "vitest": "^4.1.10",
     "wrangler": "^4.83.0"
   }
 }

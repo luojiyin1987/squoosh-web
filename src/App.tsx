@@ -14,6 +14,13 @@ import {
   INITIAL_COMPRESSION_STATE,
   isCurrentRequestPhase,
 } from './lib/compression-state'
+import {
+  createUniquePath,
+  getDroppedFolderImages,
+  getFolderImages,
+  type DroppedFileSystemEntry,
+  type FolderImage,
+} from './lib/folder-compression'
 import { useLocale } from './lib/i18n.tsx'
 
 const FORMAT_ORDER: CompressionFormat[] = ['webp', 'avif', 'jpeg', 'png']
@@ -51,18 +58,22 @@ function App() {
     INITIAL_COMPRESSION_STATE,
   )
   const [isDragActive, setIsDragActive] = useState(false)
-  const [folderFiles, setFolderFiles] = useState<File[]>([])
+  const [folderFiles, setFolderFiles] = useState<FolderImage[]>([])
   const [isFolderCompressing, setIsFolderCompressing] = useState(false)
+  const [folderProgress, setFolderProgress] = useState({ completed: 0, total: 0 })
   const [folderError, setFolderError] = useState<string | null>(null)
   const [folderResult, setFolderResult] = useState<{
     inputBytes: number
     outputBytes: number
+    totalCount: number
+    compressedCount: number
     skippedCount: number
     zipUrl: string
   } | null>(null)
   const [sourcePreviewUrl, setSourcePreviewUrl] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement | null>(null)
   const folderInputRef = useRef<HTMLInputElement | null>(null)
+  const folderRequestIdRef = useRef(0)
   const stateRef = useRef(state)
 
   const selectedFile = state.file
@@ -293,6 +304,13 @@ function App() {
     setFolderResult(null)
   }
 
+  function invalidateFolderCompression() {
+    folderRequestIdRef.current += 1
+    setIsFolderCompressing(false)
+    setFolderProgress({ completed: 0, total: 0 })
+    resetFolderResult()
+  }
+
   function handleFileSelection(file: File | null) {
     if (sourcePreviewUrl) {
       URL.revokeObjectURL(sourcePreviewUrl)
@@ -300,8 +318,8 @@ function App() {
 
     const nextSourcePreviewUrl = file ? URL.createObjectURL(file) : null
     setSourcePreviewUrl(nextSourcePreviewUrl)
+    invalidateFolderCompression()
     setFolderFiles([])
-    resetFolderResult()
     dispatch({ type: 'selectFile', file })
 
     if (fileInputRef.current) {
@@ -310,23 +328,24 @@ function App() {
   }
 
   function handleFolderSelection(files: FileList | null) {
-    const images = Array.from(files ?? []).filter((file) =>
-      file.type.startsWith('image/'),
-    )
+    handleFolderImages(getFolderImages(Array.from(files ?? [])))
+
+    if (folderInputRef.current) {
+      folderInputRef.current.value = ''
+    }
+  }
+
+  function handleFolderImages(images: FolderImage[]) {
 
     if (sourcePreviewUrl) {
       URL.revokeObjectURL(sourcePreviewUrl)
     }
 
-    const firstFile = images[0] ?? null
+    const firstFile = images[0]?.file ?? null
     setSourcePreviewUrl(firstFile ? URL.createObjectURL(firstFile) : null)
+    invalidateFolderCompression()
     setFolderFiles(images)
-    resetFolderResult()
     dispatch({ type: 'selectFile', file: firstFile })
-
-    if (folderInputRef.current) {
-      folderInputRef.current.value = ''
-    }
   }
 
   function updateSettings(partial: Partial<CompressionSettings>) {
@@ -334,7 +353,7 @@ function App() {
   }
 
   function handleCompress() {
-    resetFolderResult()
+    invalidateFolderCompression()
     dispatch({
       type: 'startCompression',
       startedAt: performance.now(),
@@ -346,27 +365,46 @@ function App() {
       return
     }
 
+    const requestId = ++folderRequestIdRef.current
+    const files = [...folderFiles]
+    const settings = { ...state.settings }
+
     setIsFolderCompressing(true)
+    setFolderProgress({ completed: 0, total: files.length })
     resetFolderResult()
 
     try {
       const zip = new JSZip()
+      const usedPaths = new Set<string>()
       let inputBytes = 0
       let compressedCount = 0
 
-      for (const file of folderFiles) {
+      for (const [index, folderFile] of files.entries()) {
         try {
+          const { file, relativePath } = folderFile
           const decoded = await fileToImageData(file)
-          const encoded = await encodeImage(decoded.imageData, state.settings)
-          const relativePath = file.webkitRelativePath || file.name
-          const outputPath = buildCompressedPath(relativePath, encoded.extension)
+          const encoded = await encodeImage(decoded.imageData, settings)
+          const outputPath = createUniquePath(
+            buildCompressedPath(relativePath, encoded.extension),
+            usedPaths,
+          )
+
+          if (requestId !== folderRequestIdRef.current) {
+            return
+          }
 
           zip.file(outputPath, encoded.bytes)
           inputBytes += file.size
           compressedCount += 1
         } catch {
-          console.warn('[squoosh-web] Folder file skipped:', file.name)
+          console.warn('[squoosh-web] Folder file skipped:', folderFile.file.name)
         }
+
+        if (requestId !== folderRequestIdRef.current) {
+          return
+        }
+
+        setFolderProgress({ completed: index + 1, total: files.length })
       }
 
       if (compressedCount === 0) {
@@ -375,14 +413,19 @@ function App() {
 
       const zipBlob = await zip.generateAsync({
         type: 'blob',
-        compression: 'DEFLATE',
-        compressionOptions: { level: 6 },
+        compression: 'STORE',
       })
+
+      if (requestId !== folderRequestIdRef.current) {
+        return
+      }
 
       setFolderResult({
         inputBytes,
         outputBytes: zipBlob.size,
-        skippedCount: folderFiles.length - compressedCount,
+        totalCount: files.length,
+        compressedCount,
+        skippedCount: files.length - compressedCount,
         zipUrl: URL.createObjectURL(zipBlob),
       })
     } catch (caughtError) {
@@ -390,20 +433,31 @@ function App() {
         caughtError instanceof Error ? caughtError.message : t('error.compressionFailed'),
       )
     } finally {
-      setIsFolderCompressing(false)
+      if (requestId === folderRequestIdRef.current) {
+        setIsFolderCompressing(false)
+      }
     }
   }
 
-  function handleDrop(event: DragEvent<HTMLLabelElement>) {
+  async function handleDrop(event: DragEvent<HTMLLabelElement>) {
     event.preventDefault()
     setIsDragActive(false)
 
-    const files = event.dataTransfer.files
-    if (files.length > 1 || files.item(0)?.webkitRelativePath) {
-      handleFolderSelection(files)
-    } else {
-      handleFileSelection(files.item(0))
+    const entries = Array.from(event.dataTransfer.items)
+      .map((item) => (item as unknown as {
+        webkitGetAsEntry?: () => DroppedFileSystemEntry | null
+      }).webkitGetAsEntry?.())
+      .filter(
+        (entry): entry is DroppedFileSystemEntry =>
+          entry !== null && entry !== undefined,
+      )
+
+    if (entries.some((entry) => entry.isDirectory)) {
+      handleFolderImages(await getDroppedFolderImages(entries))
+      return
     }
+
+    handleFileSelection(event.dataTransfer.files.item(0))
   }
 
   return (
@@ -436,29 +490,24 @@ function App() {
             ) : null}
           </div>
 
+          <input
+            accept="image/*"
+            className="sr-only"
+            id="single-image-input"
+            ref={fileInputRef}
+            type="file"
+            onChange={(event) =>
+              handleFileSelection(event.target.files?.item(0) ?? null)
+            }
+          />
           <label
+            htmlFor="single-image-input"
             className={`dropzone${isDragActive ? ' dropzone-active' : ''}`}
             onDragEnter={() => setIsDragActive(true)}
             onDragLeave={() => setIsDragActive(false)}
             onDragOver={(event) => event.preventDefault()}
             onDrop={handleDrop}
           >
-            <input
-              accept="image/*"
-              className="sr-only"
-              ref={fileInputRef}
-              type="file"
-              onChange={(event) =>
-                handleFileSelection(event.target.files?.item(0) ?? null)
-              }
-            />
-            <input
-              accept="image/*"
-              className="sr-only"
-              ref={folderInputRef}
-              type="file"
-              onChange={(event) => handleFolderSelection(event.target.files)}
-            />
             <span className="dropzone-pill">{t('source.dropzonePill')}</span>
             <strong>
               {hasFolder
@@ -473,6 +522,14 @@ function App() {
                 : t('source.dropzoneFormats')}
             </span>
           </label>
+          <input
+            accept="image/*"
+            className="sr-only"
+            id="folder-input"
+            ref={folderInputRef}
+            type="file"
+            onChange={(event) => handleFolderSelection(event.target.files)}
+          />
           <button
             className="folder-button"
             type="button"
@@ -623,6 +680,14 @@ function App() {
             </button>
           ) : null}
 
+          {isFolderCompressing ? (
+            <p className="panel-note">
+              {t('folder.progress')
+                .replace('{completed}', String(folderProgress.completed))
+                .replace('{total}', String(folderProgress.total))}
+            </p>
+          ) : null}
+
           <p className="panel-note">{t('panel.note')}</p>
 
           {error || folderError ? <p className="error-banner">{error ?? folderError}</p> : null}
@@ -642,7 +707,7 @@ function App() {
             <div className="result-stats">
               <article><span>{t('result.input')}</span><strong>{formatBytes(folderResult.inputBytes)}</strong></article>
               <article><span>{t('result.output')}</span><strong>{formatBytes(folderResult.outputBytes)}</strong></article>
-              <article><span>{t('folder.files')}</span><strong>{folderFiles.length}</strong></article>
+              <article><span>{t('folder.files')}</span><strong>{folderResult.totalCount}</strong></article>
               <article><span>{t('folder.skipped')}</span><strong>{folderResult.skippedCount}</strong></article>
             </div>
             <p className="result-meta">{t('folder.resultNote')}</p>
