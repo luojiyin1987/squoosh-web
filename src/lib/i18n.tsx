@@ -54,6 +54,7 @@ const en: Translations = {
   'folder.download': 'Download compressed ZIP',
   'folder.noCompressibleImages': 'No image in this folder could be compressed.',
   'folder.noSupportedImages': 'No supported image was found. This tool only compresses image files.',
+  'folder.readFailed': 'The browser could not read this folder.',
 
   // Notes
   'panel.note': 'Re-encoded images will not retain original EXIF / ICC metadata, which is the default for pure front-end compression tools.',
@@ -130,6 +131,7 @@ const zh: Translations = {
   'folder.download': '下载压缩后的 ZIP',
   'folder.noCompressibleImages': '文件夹中没有可压缩的图片。',
   'folder.noSupportedImages': '没有找到可识别的图片。此工具只能压缩图片文件。',
+  'folder.readFailed': '浏览器无法读取此文件夹。',
 
   // Notes
   'panel.note': '重新编码后的图片不会保留原始 EXIF / ICC 元数据，这通常是纯前端压缩工具的默认结果。',

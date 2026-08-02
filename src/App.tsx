@@ -74,6 +74,7 @@ function App() {
   const fileInputRef = useRef<HTMLInputElement | null>(null)
   const folderInputRef = useRef<HTMLInputElement | null>(null)
   const folderRequestIdRef = useRef(0)
+  const folderScanIdRef = useRef(0)
   const stateRef = useRef(state)
 
   const selectedFile = state.file
@@ -82,6 +83,7 @@ function App() {
   const isCompressing =
     state.phase.tag === 'decoding' || state.phase.tag === 'encoding'
   const hasFolder = folderFiles.length > 0
+  const areSettingsLocked = isCompressing || isFolderCompressing
 
   const fileName = selectedFile?.name ?? 'source-image'
   const resultPreviewUrl = result?.previewUrl ?? null
@@ -311,6 +313,10 @@ function App() {
     resetFolderResult()
   }
 
+  function invalidateFolderScan() {
+    folderScanIdRef.current += 1
+  }
+
   function handleFileSelection(file: File | null) {
     if (sourcePreviewUrl) {
       URL.revokeObjectURL(sourcePreviewUrl)
@@ -318,6 +324,7 @@ function App() {
 
     const nextSourcePreviewUrl = file ? URL.createObjectURL(file) : null
     setSourcePreviewUrl(nextSourcePreviewUrl)
+    invalidateFolderScan()
     invalidateFolderCompression()
     setFolderFiles([])
     dispatch({ type: 'selectFile', file })
@@ -328,6 +335,7 @@ function App() {
   }
 
   function handleFolderSelection(files: FileList | null) {
+    invalidateFolderScan()
     handleFolderImages(getFolderImages(Array.from(files ?? [])))
 
     if (folderInputRef.current) {
@@ -446,6 +454,7 @@ function App() {
     event.preventDefault()
     setIsDragActive(false)
 
+    const scanId = ++folderScanIdRef.current
     const entries = Array.from(event.dataTransfer.items)
       .map((item) => (item as unknown as {
         webkitGetAsEntry?: () => DroppedFileSystemEntry | null
@@ -456,7 +465,18 @@ function App() {
       )
 
     if (entries.some((entry) => entry.isDirectory)) {
-      handleFolderImages(await getDroppedFolderImages(entries))
+      try {
+        const images = await getDroppedFolderImages(entries)
+        if (scanId === folderScanIdRef.current) {
+          handleFolderImages(images)
+        }
+      } catch (caughtError) {
+        if (scanId === folderScanIdRef.current) {
+          setFolderError(
+            caughtError instanceof Error ? caughtError.message : t('folder.readFailed'),
+          )
+        }
+      }
       return
     }
 
@@ -568,6 +588,7 @@ function App() {
                   state.settings.format === format ? ' format-card-active' : ''
                 }`}
                 type="button"
+                disabled={areSettingsLocked}
                 onClick={() => updateSettings({ format })}
               >
                 <span>{FORMAT_LABELS[format]}</span>
@@ -584,6 +605,7 @@ function App() {
                 <span>{activeFormatMeta.controlsLabel}</span>
                 <div className="field-row">
                   <input
+                    disabled={areSettingsLocked}
                     max={100}
                     min={35}
                     step={1}
@@ -601,6 +623,7 @@ function App() {
                 <span>{activeFormatMeta.controlsLabel}</span>
                 <div className="field-row">
                   <input
+                    disabled={areSettingsLocked}
                     max={6}
                     min={0}
                     step={1}
@@ -618,6 +641,7 @@ function App() {
             {state.settings.format === 'webp' ? (
               <label className="toggle">
                 <input
+                  disabled={areSettingsLocked}
                   checked={state.settings.webpLossless}
                   type="checkbox"
                   onChange={(event) =>
@@ -634,6 +658,7 @@ function App() {
                   <span>{t('controls.avifSpeed')}</span>
                   <div className="field-row">
                     <input
+                      disabled={areSettingsLocked}
                       max={10}
                       min={0}
                       step={1}
@@ -649,6 +674,7 @@ function App() {
 
                 <label className="toggle">
                   <input
+                    disabled={areSettingsLocked}
                     checked={state.settings.avifLossless}
                     type="checkbox"
                     onChange={(event) =>
