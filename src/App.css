@@ -84,6 +84,7 @@
 }
 
 .workspace {
+  align-items: start;
   grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
 }
 
@@ -315,11 +316,20 @@
 }
 
 .folder-button {
-  margin-top: 12px;
   padding: 8px 12px;
   border-radius: 999px;
   cursor: pointer;
   font-family: var(--font-body);
+}
+
+.source-action-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 12px;
+  color: var(--muted);
+  font-size: 0.9rem;
 }
 
 .primary-button:disabled {

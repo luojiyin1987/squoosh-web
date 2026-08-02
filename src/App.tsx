@@ -553,13 +553,16 @@ function App() {
             type="file"
             onChange={(event) => handleFolderSelection(event.target.files)}
           />
-          <button
-            className="folder-button"
-            type="button"
-            onClick={() => folderInputRef.current?.click()}
-          >
-            {t('source.selectFolder')}
-          </button>
+          <div className="source-action-row">
+            <span>{t('source.folderActionHint')}</span>
+            <button
+              className="folder-button"
+              type="button"
+              onClick={() => folderInputRef.current?.click()}
+            >
+              {t('source.selectFolder')}
+            </button>
+          </div>
 
           {sourcePreviewUrl ? (
             <div className="preview-stack">
