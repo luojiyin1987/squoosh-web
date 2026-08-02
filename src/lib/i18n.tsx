@@ -20,6 +20,10 @@ const en: Translations = {
   'source.dropzoneHint': 'Drop an image here',
   'source.dropzoneFormats': 'PNG, JPEG, WebP, AVIF and other browser-readable image types',
   'source.dropzoneReady': 'ready to compress',
+  'source.selectFolder': 'Select a folder',
+  'source.selectImage': 'Select an image',
+  'source.folderSelected': '{count} images selected from a folder',
+  'source.folderReady': 'The folder structure will be kept in the ZIP file',
   'source.previewAlt': 'Selected source',
 
   // Codec panel
@@ -42,6 +46,16 @@ const en: Translations = {
   // Actions
   'compress.run': 'Run compression',
   'compress.running': 'Compressing in browser...',
+  'folder.compress': 'Compress {count} images to ZIP',
+  'folder.running': 'Compressing folder in browser...',
+  'folder.progress': 'Compressed {completed} / {total} images',
+  'folder.files': 'Images',
+  'folder.skipped': 'Skipped',
+  'folder.resultNote': 'The ZIP file keeps the selected folder structure. Files that fail to decode are skipped.',
+  'folder.download': 'Download compressed ZIP',
+  'folder.noCompressibleImages': 'No image in this folder could be compressed.',
+  'folder.noSupportedImages': 'No supported image was found. This tool only compresses image files.',
+  'folder.readFailed': 'The browser could not read this folder.',
 
   // Notes
   'panel.note': 'Re-encoded images will not retain original EXIF / ICC metadata, which is the default for pure front-end compression tools.',
@@ -84,6 +98,10 @@ const zh: Translations = {
   'source.dropzoneHint': '拖入图片',
   'source.dropzoneFormats': 'PNG、JPEG、WebP、AVIF 等浏览器可读取的图片格式',
   'source.dropzoneReady': '准备压缩',
+  'source.selectFolder': '选择文件夹',
+  'source.selectImage': '选择图片',
+  'source.folderSelected': '已从文件夹选择 {count} 张图片',
+  'source.folderReady': '压缩后的目录结构会保留在 ZIP 文件中',
   'source.previewAlt': '已选源图',
 
   // Codec panel
@@ -106,6 +124,16 @@ const zh: Translations = {
   // Actions
   'compress.run': '运行压缩',
   'compress.running': '正在浏览器中压缩...',
+  'folder.compress': '压缩 {count} 张图片并导出 ZIP',
+  'folder.running': '正在浏览器中压缩文件夹...',
+  'folder.progress': '已压缩 {completed} / {total} 张图片',
+  'folder.files': '图片数',
+  'folder.skipped': '跳过',
+  'folder.resultNote': 'ZIP 文件会保留所选文件夹的目录结构。无法解码的文件会被跳过。',
+  'folder.download': '下载压缩后的 ZIP',
+  'folder.noCompressibleImages': '文件夹中没有可压缩的图片。',
+  'folder.noSupportedImages': '没有找到可识别的图片。此工具只能压缩图片文件。',
+  'folder.readFailed': '浏览器无法读取此文件夹。',
 
   // Notes
   'panel.note': '重新编码后的图片不会保留原始 EXIF / ICC 元数据，这通常是纯前端压缩工具的默认结果。',
@@ -156,6 +184,7 @@ interface LocaleContextValue {
 
 const LocaleContext = createContext<LocaleContextValue | null>(null)
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useLocale(): LocaleContextValue {
   const ctx = useContext(LocaleContext)
   if (!ctx) {
