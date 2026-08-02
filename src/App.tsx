@@ -554,7 +554,13 @@ function App() {
             onChange={(event) => handleFolderSelection(event.target.files)}
           />
           <div className="source-action-row">
-            <span>{t('source.folderActionHint')}</span>
+            <button
+              className="folder-button"
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+            >
+              {t('source.selectImage')}
+            </button>
             <button
               className="folder-button"
               type="button"

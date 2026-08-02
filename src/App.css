@@ -324,11 +324,8 @@
 .source-action-row {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: 12px;
   margin-top: 12px;
-  color: var(--muted);
-  font-size: 0.9rem;
 }
 
 .primary-button:disabled {
